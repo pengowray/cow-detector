@@ -1,3 +1,5 @@
+![image](https://github.com/pengowray/cow-detector/assets/800133/ffd06b97-fce2-4277-8189-ed80bf94f671)
+
 # cow-detector
 Finds cow openings in chess.com tournaments and gives stats on usage.
 
