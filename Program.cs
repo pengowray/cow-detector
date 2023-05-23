@@ -25,6 +25,7 @@ internal class Program {
         //https://www.chess.com/play/arena/2699599?ref_id=70349336
         // => https://www.chess.com/tournament/live/arena/cramling-tuesday-2699599
         //https://www.chess.com/tournament/live/arena/crazy-bullet-2699632
+        //https://www.chess.com/tournament/live/early-titled-tuesday-blitz-may-23-2023-4033933
         //https://api.chess.com/pub/player/annacramling
         // => https://www.chess.com/member/annacramling
         // => https://go.chess.com/Anna [affiliate link!]
@@ -41,23 +42,25 @@ internal class Program {
         // https://www.chess.com/game/live/77985224509
         // https://www.chess.com/analysis/game/live/77985224509
 
+        // cow variation:
         // white cow interrupted by Bg4: https://www.chess.com/game/live/77984453969
         // black cow interrupted by Bb5: https://www.chess.com/game/live/77984480067
         // white cow interrupted by dxe3 (white wins): https://www.chess.com/game/live/77984527389
         // black cow interrupted by various: https://www.chess.com/game/live/77984527391
         // white cow missed: https://www.chess.com/game/live/77984577579 [...6. O-O-O]
+        // slow cow (8 moves to complete): https://www.chess.com/game/live/78588870287
+        // partial cow (black: 5/6), loses knight https://www.chess.com/game/live/78588877473 
 
         // empty game?: https://www.chess.com/game/live/77984453973 | https://www.chess.com/analysis/game/live/77984453973?tab=analysis
 
         //string arenaId = "cramling-bullet-2697041"; // https://www.chess.com/tournament/live/arena/cramling-bullet-2697041
         //string arenaId = "early-titled-tuesday-blitz-may-16-2023-4020317"; // [no cows] https://www.chess.com/tournament/live/early-titled-tuesday-blitz-may-16-2023-4020317
         //string arenaId = "cramling-tuesday-2699599";
-        string arenaId = "crazy-bullet-2699632";
+        //string arenaId = "crazy-bullet-2699632";
+        string arenaId = "early-titled-tuesday-blitz-may-23-2023-4033933";
         string endpoint = "https://api.chess.com/pub/tournament/{0}"; // url-id
         string url = string.Format(endpoint, arenaId);
         //string url = "https://api.chess.com/pub/player/theultimatecow/games/2023/05";
-
-
 
         Console.WriteLine("url: " + url);
 
@@ -81,7 +84,6 @@ internal class Program {
         var jsonText = await client.GetStringAsync(url);
         var json = JsonDocument.Parse(jsonText);
 
-
         //creator in System.Text.Json
         if (json.RootElement.TryGetProperty("name", out var nameJsonEl)) {
             Console.WriteLine($"name: {nameJsonEl.GetString()}");
@@ -102,7 +104,7 @@ internal class Program {
         foreach (var round in rounds) {
             Console.WriteLine($"round: {round}");
 
-            var roundText = await client.GetStringAsync(round);
+            var roundText = await client.GetStringAsync(round); // download round info
             var roundJson = JsonDocument.Parse(roundText);
 
             bool success = roundJson.RootElement.TryGetProperty("games", out var gamesAll);

@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace BovineChess;
 
@@ -19,7 +22,11 @@ public class CowStats {
     public int cowWins = 0;
     public int cowLosses = 0;
     public int cowDraws = 0;
-    
+
+    // games with partial cows:
+    public int partialCow;
+    public int[] cowAmounts = new int[7];
+
     public HashSet<string> cowUser = new();
     public HashSet<string> allUsers = new();
 
@@ -35,12 +42,10 @@ public class CowStats {
         if (cows.HasCows) {
 
             gamesWithCows++;
+            totalCows += cows.CowCount;
 
-            if (cows.HasBlackCow && cows.HasWhiteCow) {
-                totalCows += 2;
+            if (cows.CowCount == 2) {
                 doubleCows++;
-            } else {
-                totalCows++;
             }
 
             string? date = board.GetTag("UTCDate"); // "2023.05.16"
@@ -51,6 +56,7 @@ public class CowStats {
             string? eco = board.GetTag("ECO"); // e.g. "D15" // Encyclopaedia of Chess Openings
             string? ecoUrl = board.GetTag("ECOUrl"); // e.g. "https://www.chess.com/openings/Slav-Defense-Modern-Three-Knights-Variation"
             string ecoText = "";
+
             if (cows.HasWhiteCow) {
                 ecoText = $" - ECO: {ecoUrl} [{eco}]";
             }
@@ -77,11 +83,18 @@ public class CowStats {
                 } else if (cows.HasBlackCow) {
                     cowWins++;
                 }
-            } else if (result == "1/2-1/2" && ((cows.HasWhiteCow || cows.HasBlackCow) && !(cows.HasWhiteCow && cows.HasBlackCow))) {
+            } else if (result == "1/2-1/2" && cows.CowCount == 1) {
                 cowDraws++;
             }
 
             Console.WriteLine($"{date} - {board.Url} - {cows} - {white} v {black} - {termination} ({result}){ecoText}");
+        } else if (cows.HasPartialCows) {
+            string? white = board.GetTag("White"); // username
+            string? black = board.GetTag("Black"); // username
+            string? eco = board.GetTag("ECO"); // e.g. "D15" // Encyclopaedia of Chess Openings
+
+            Console.WriteLine($"[Partial cow(s)] {board.Url} - {cows} - {white} v {black} - [{eco}]");
+            partialCow++;
 
         } else {
             string white = board.GetTag("White"); // username
@@ -92,7 +105,7 @@ public class CowStats {
 
             //debug
             string result = board.GetTag("Result");
-            Console.WriteLine($"[no cow game] {board.Url} - {result} - {eco}");
+            Console.WriteLine($"[no cow game] {board.Url} - {result} - [{eco}]");
         }
 
     }
@@ -103,6 +116,7 @@ public class CowStats {
         Console.WriteLine($" - games with one cow: Cow wins/losses/draws: {cowWins}/{cowLosses}/{cowDraws}");
         Console.WriteLine($" - white cows: {whiteCows}; black cows: {blackCows}");
         Console.WriteLine($" - total players: {allUsers.Count()}; players who used cow opening at least once: {cowUser.Count()} ({percent:P2})");
+        Console.WriteLine($" - games with no full cows but some partial cow: {partialCow}");
     }
 
 }

@@ -13,7 +13,7 @@ public class OpeningMatch {
         }
     }
 
-    public int MatchedMovesSlow{ get; private set; } = 0; // allow other moves inbetween
+    //public int MatchedMovesSlow{ get; private set; } = 0; // allow other moves inbetween
 
 
     public string[] SeenMoves { get; private set; }
@@ -44,7 +44,11 @@ public class OpeningMatch {
 
                 var matched = move.IsMoveTo(openingMoves);
                 if (matched != null) {
-                    seen.Add(matched);
+                    if (!seen.Contains(matched)) {
+                        seen.Add(matched);
+                    } else {
+                        brokenChain = true;
+                    }
                     if (!brokenChain) {
                         seenNoBreaks.Add(matched);
                     }
@@ -56,6 +60,7 @@ public class OpeningMatch {
                     var matchedInOrder = move.IsMoveTo(openingMoves[n]);
                     if (matchedInOrder != null) {
                         seenInOrder.Add(matchedInOrder);
+
                         if (!brokenChainInOrder) {
                             seenInOrderNoBreaks.Add(matched);
                         }
@@ -71,5 +76,8 @@ public class OpeningMatch {
         }
 
         SeenMoves = seen.ToArray();
+        SeenNoBreaks = seenNoBreaks.ToArray();
+        SeenInOrder = seenInOrder.ToArray();
+        SeenInOrderNoBreaks = seenInOrderNoBreaks.ToArray();
     }
 }
