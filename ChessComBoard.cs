@@ -56,24 +56,33 @@ public class ChessComBoard {
 
 
     public static List<Move> ExtractMovesWithTime(string pgn) {
-        //var movesWithTime = new List<Tuple<string, string, string>>();
         var movesWithTime = new List<Move>();
 
         var movesRegex = new Regex(@"(\d+\.)\s+(\w+)(\s+{\[%clk\s+(\d+:\d+:\d+\.\d+)\]})?\s*(\d+\.\.\.)\s+(\w+)(\s+{\[%clk\s+(\d+:\d+:\d+\.\d+)\]})?");
 
+        int expectedMoveNum = 1;
         foreach (Match match in movesRegex.Matches(pgn)) {
             string moveNumber = match.Groups[1].Value;
-            string whiteMove = match.Groups[2].Value;
-            string whiteTime = match.Groups[4].Value;
+            string wMove = match.Groups[2].Value.Trim();
+            string wTime = match.Groups[4].Value;
 
-            movesWithTime.Add(new Move(false, moveNumber, whiteMove, whiteTime));
+            var whitemove = new Move(false, moveNumber, wMove, wTime);
+            movesWithTime.Add(whitemove);
 
             if (match.Groups[6].Success) {
-                //string blackMoveNumer = match.Groups[5].Value; // "1..."
-                string blackMove = match.Groups[6].Value;
-                string blackTime = match.Groups[8].Value;
-                movesWithTime.Add(new Move(true, moveNumber, blackMove, blackTime));
+                string blackMoveNumer = match.Groups[5].Value; // "1..."
+                string bMove = match.Groups[6].Value.Trim();
+                string bTime = match.Groups[8].Value;
+
+                var blackmove = new Move(true, moveNumber, bMove, bTime);
+                movesWithTime.Add(blackmove);
+                if (blackmove.moveNumber != whitemove.moveNumber) {
+                    throw new Exception($"Black move number does not match white move number: w:{whitemove.moveNumber}, b:{blackmove.moveNumber}, expected:{expectedMoveNum}; pgn: {pgn}");
+                }
             }
+
+            expectedMoveNum++;
+
         }
 
         return movesWithTime;
@@ -142,7 +151,7 @@ public class ChessComBoard {
             }
 
             if (!move.isBlack) {
-                if (CowWhite.Contains(move.move)) {
+                if (CowWhite.Any(m => move.move.StartsWith(m))) { //if (CowWhite.Contains(move.move)) {
                     seenWhite.Add(move.move);
                     whiteTime = move.time;
                 } else {
@@ -151,7 +160,7 @@ public class ChessComBoard {
                     }
                 }
             } else {
-                if (CowBlack.Contains(move.move)) {
+                if (CowBlack.Any(m => move.move.StartsWith(m))) { // if (CowBlack.Contains(move.move)) {
                     seenBlack.Add(move.move);
                     blackTime = move.time;
                 } else {

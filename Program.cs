@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
+using System.Xml.Linq;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace chesscom_analysis;
@@ -23,6 +24,10 @@ internal class Program {
         // => https://www.chess.com/member/annacramling
         // => https://go.chess.com/Anna [affiliate link!]
         // => https://www.twitch.tv/annacramling
+        // => https://api.chess.com/pub/player/theultimatecow
+        // => https://api.chess.com/pub/player/annaybc
+        // => https://api.chess.com/pub/player/{username}/games/{YYYY}/{MM}
+        // => https://api.chess.com/pub/player/theultimatecow/games/2023/05
         //https://api.chess.com/pub/player/annacramling/games  -- currently playing games
         //https://api.chess.com/pub/player/annacramling/archives
 
@@ -34,6 +39,7 @@ internal class Program {
         //string arenaId = "early-titled-tuesday-blitz-may-16-2023-4020317"; // [no cows] https://www.chess.com/tournament/live/early-titled-tuesday-blitz-may-16-2023-4020317
         string endpoint = "https://api.chess.com/pub/tournament/{0}"; // url-id
         string url = string.Format(endpoint, arenaId);
+        //string url = "https://api.chess.com/pub/player/theultimatecow/games/2023/05";
 
         Console.WriteLine("url: " + url);
 
@@ -47,9 +53,16 @@ internal class Program {
         Console.WriteLine(jsonText);
 
         //creator in System.Text.Json
-        var name = json.RootElement.GetProperty("name").GetString();
+        if (json.RootElement.TryGetProperty("name", out var nameJsonEl)) {
+            Console.WriteLine($"name: {nameJsonEl.GetString()}");
+        }
 
-        Console.WriteLine($"name: {name}");
+        bool success1 = json.RootElement.TryGetProperty("games", out var gamesAll1);
+        if (success1) {
+            // e.g. user
+            CowCheck(gamesAll1);
+            return;
+        }
 
         var rounds = json.RootElement.GetProperty("rounds").EnumerateArray().Select(x => x.GetString()).ToList();
 
