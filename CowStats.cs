@@ -22,6 +22,7 @@ public class CowStats {
     public int cowWins = 0;
     public int cowLosses = 0;
     public int cowDraws = 0;
+    public int cowIncomplete = 0;
 
     // games with partial cows:
     public int partialCow;
@@ -83,17 +84,20 @@ public class CowStats {
                 } else if (cows.HasBlackCow) {
                     cowWins++;
                 }
-            } else if (result == "1/2-1/2" && cows.CowCount == 1) {
-                cowDraws++;
+            } else if (result == "1/2-1/2") { 
+                if (cows.CowCount == 1) cowDraws++;
+            } else { // result == "*" or missing
+                cowIncomplete++;
             }
 
-            Console.WriteLine($"{date} - {board.Url} - {cows} - {white} v {black} - {termination} ({result}){ecoText}");
+            Console.WriteLine($"{date} - {board.Url} - {cows} - {white} v {black} ({result}) - {termination}{ecoText}");
         } else if (cows.HasPartialCows) {
             string? white = board.GetTag("White"); // username
             string? black = board.GetTag("Black"); // username
             string? eco = board.GetTag("ECO"); // e.g. "D15" // Encyclopaedia of Chess Openings
+            string result = board.GetTag("Result");
 
-            Console.WriteLine($"[Partial cow(s)] {board.Url} - {cows} - {white} v {black} - [{eco}]");
+            Console.WriteLine($"[Partial cow(s)] {board.Url} - {cows} - {white} v {black} ({result}) - [{eco}]");
             partialCow++;
 
         } else {
@@ -102,10 +106,11 @@ public class CowStats {
             allUsers.Add(white);
             allUsers.Add(black);
             string eco = board.GetTag("ECO"); // e.g. "D15"
+            string result = board.GetTag("Result");
 
             //debug
-            string result = board.GetTag("Result");
-            Console.WriteLine($"[no cow game] {board.Url} - {result} - [{eco}]");
+            ///last move so i can see it parsed
+            Console.WriteLine($"[no cow] {board.Url} - {white} v {black} ({result}) - [{eco}] - Final:{board?.Moves?.LastOrDefault()}");
         }
 
     }

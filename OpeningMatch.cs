@@ -46,6 +46,7 @@ public class OpeningMatch {
                 if (matched != null) {
                     if (!seen.Contains(matched)) {
                         seen.Add(matched);
+                        LastMove = move;
                     } else {
                         brokenChain = true;
                     }
@@ -60,6 +61,7 @@ public class OpeningMatch {
                     var matchedInOrder = move.IsMoveTo(openingMoves[n]);
                     if (matchedInOrder != null) {
                         seenInOrder.Add(matchedInOrder);
+                        LastMoveInOrderMove = move;
 
                         if (!brokenChainInOrder) {
                             seenInOrderNoBreaks.Add(matched);

@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.NetworkInformation;
+using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
 using static System.Net.WebRequestMethods;
@@ -26,6 +27,9 @@ internal class Program {
         // => https://www.chess.com/tournament/live/arena/cramling-tuesday-2699599
         //https://www.chess.com/tournament/live/arena/crazy-bullet-2699632
         //https://www.chess.com/tournament/live/early-titled-tuesday-blitz-may-23-2023-4033933
+        // => [pgn download link] blob:https://www.chess.com/d366c5eb-14f2-4675-98e6-35c2a2ffdbd0
+        // => [csv results link] https://www.chess.com/tournament/live/early-titled-tuesday-blitz-may-23-2023-4033933/download-results
+        // => https://api.chess.com/pub/tournament/early-titled-tuesday-blitz-may-23-2023-4033933
         //https://api.chess.com/pub/player/annacramling
         // => https://www.chess.com/member/annacramling
         // => https://go.chess.com/Anna [affiliate link!]
@@ -35,8 +39,11 @@ internal class Program {
         // => https://api.chess.com/pub/player/{username}/games/{YYYY}/{MM}
         // => https://api.chess.com/pub/player/theultimatecow/games/2023/05
         // => https://api.chess.com/pub/player/annacramling/games/2023/05
+        // => https://api.chess.com/pub/player/annacramling/tournaments
         //https://api.chess.com/pub/player/annacramling/games  -- currently playing games [?] doesn't seem to work
         //https://api.chess.com/pub/player/annacramling/archives -- dubious?
+        //https://www.chess.com/member/MagnusCarlsen
+        // 
 
         // double cow: (in above tournament): 77985224509
         // https://www.chess.com/game/live/77985224509
@@ -48,7 +55,9 @@ internal class Program {
         // white cow interrupted by dxe3 (white wins): https://www.chess.com/game/live/77984527389
         // black cow interrupted by various: https://www.chess.com/game/live/77984527391
         // white cow missed: https://www.chess.com/game/live/77984577579 [...6. O-O-O]
-        // slow cow (8 moves to complete): https://www.chess.com/game/live/78588870287
+        // slow cow, black (7 moves to complete): https://www.chess.com/game/live/78584576311
+        // slow cow, black (8 moves to complete): https://www.chess.com/game/live/78588870287
+        // slow cow, black (10 moves to complete): https://www.chess.com/game/live/78586245065
         // partial cow (black: 5/6), loses knight https://www.chess.com/game/live/78588877473 
 
         // empty game?: https://www.chess.com/game/live/77984453973 | https://www.chess.com/analysis/game/live/77984453973?tab=analysis
@@ -57,14 +66,23 @@ internal class Program {
         //string arenaId = "early-titled-tuesday-blitz-may-16-2023-4020317"; // [no cows] https://www.chess.com/tournament/live/early-titled-tuesday-blitz-may-16-2023-4020317
         //string arenaId = "cramling-tuesday-2699599";
         //string arenaId = "crazy-bullet-2699632";
-        string arenaId = "early-titled-tuesday-blitz-may-23-2023-4033933";
+        string arenaId = "early-titled-tuesday-blitz-may-23-2023-4033933"; // older rounds seem to disappear? // blob:https://www.chess.com/d366c5eb-14f2-4675-98e6-35c2a2ffdbd0
+        //string arenaId = "-33rd-chesscom-quick-knockouts-1401-1600"; // old example
         string endpoint = "https://api.chess.com/pub/tournament/{0}"; // url-id
         string url = string.Format(endpoint, arenaId);
         //string url = "https://api.chess.com/pub/player/theultimatecow/games/2023/05";
-
+        //string url = "https://api.chess.com/pub/player/MagnusCarlsen/games/2023/05";
+        //string url = "https://api.chess.com/pub/player/mobamba604/games/2023/05"; // https://www.chess.com/players/andrea-botez
+        //string url = "https://api.chess.com/pub/player/alexandrabotez/games/2023/05";
+        //string url = "https://api.chess.com/pub/player/hikaru/games/2023/05";
+        //string url = "https://api.chess.com/pub/player/chessbruh/games/2023/05";
+        //string url = "https://api.chess.com/pub/player/dinabelenkaya/games/2023/05";
+        //string url = "https://api.chess.com/pub/player/gothamchess/games/2023/05";
         Console.WriteLine("url: " + url);
 
-        var games = AllGamesFromUrlAsync(url);
+        //var games = AllGamesFromUrlAsync(url);
+        // no cows
+        var games = AllGamesFromEventMultiPgnFile(@"C:\temp\Early-Titled-Tuesday-Blitz-May-23-2023_2023-05-24-01-00.pgn");
 
         CowStats stats = new();
         await foreach (var game in games) {
@@ -77,6 +95,28 @@ internal class Program {
         // ...
         // "rounds":["https://api.chess.com/pub/tournament/cramling-bullet-2697041/1"]}
 
+    }
+
+    public static async IAsyncEnumerable<ParsedPGN> AllGamesFromEventMultiPgnFile(string file) {
+        //TODO: make less scuffed (check for start of "[" block instead of "[Event"
+        StringBuilder sb = new StringBuilder();
+        int entryCount = 0;
+        using (var reader = System.IO.File.OpenText(file)) {
+            string line;
+            while ((line = await reader.ReadLineAsync()) != null) {
+                if (line.StartsWith("[Event")) {
+                    if (sb.Length > 0) {
+                        yield return new ParsedPGN($"file://{file}/{entryCount}", sb.ToString());
+                        sb.Clear();
+                        entryCount++;
+                    }
+                }
+                sb.AppendLine(line); 
+            }
+        }
+        if (sb.Length > 0) {
+            yield return new ParsedPGN($"file://{file}/{entryCount}", sb.ToString());
+        }
     }
 
     public static async IAsyncEnumerable<ParsedPGN> AllGamesFromUrlAsync(string url) {

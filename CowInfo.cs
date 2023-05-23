@@ -87,8 +87,10 @@ public class CowInfo {
         } else if (HasPartialCows) {
             string whitePart = "";
             string blackPart = "";
-            if (PartialWhiteCow) whitePart = $"white: {WhiteCowCompleteness}/6";
-            if (PartialBlackCow) blackPart = $"black: {BlackCowCompleteness}/6";
+            if (PartialWhiteCow) {
+                whitePart = $"white: {WhiteCowCompleteness}/6 in {CowWhite?.LastMove?.moveNumber}";
+            }
+            if (PartialBlackCow) blackPart = $"black: {BlackCowCompleteness}/6 in {CowBlack?.LastMove?.moveNumber}";
             string both = "";
             if (whitePart != "" && blackPart != "")
                 return $"partial cows ({whitePart}; {blackPart})";
