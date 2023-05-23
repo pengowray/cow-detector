@@ -35,6 +35,15 @@ internal class Program {
         // https://www.chess.com/game/live/77985224509
         // https://www.chess.com/analysis/game/live/77985224509
 
+        // white cow interrupted by Bg4: https://www.chess.com/game/live/77984453969
+        // black cow interrupted by Bb5: https://www.chess.com/game/live/77984480067
+        // white cow interrupted by dxe3 (white wins): https://www.chess.com/game/live/77984527389
+        // black cow interrupted by various: https://www.chess.com/game/live/77984527391
+        // white cow missed: https://www.chess.com/game/live/77984577579 [...6. O-O-O]
+
+        // empty game?: https://www.chess.com/game/live/77984453973 | https://www.chess.com/analysis/game/live/77984453973?tab=analysis
+
+
         string arenaId = "cramling-bullet-2697041"; // https://www.chess.com/tournament/live/arena/cramling-bullet-2697041
         //string arenaId = "early-titled-tuesday-blitz-may-16-2023-4020317"; // [no cows] https://www.chess.com/tournament/live/early-titled-tuesday-blitz-may-16-2023-4020317
         string endpoint = "https://api.chess.com/pub/tournament/{0}"; // url-id
@@ -155,13 +164,13 @@ internal class Program {
                     totalCows++;
                 }
 
-                string date = board.Metadata["UTCDate"]; // "2023.05.16"
-                string white = board.Metadata["White"]; // username
-                string black = board.Metadata["Black"]; // username
-                string termination = board.Metadata["Termination"]; // "Username won on time"
-                string result = board.Metadata["Result"]; // "0-1" or "1-0" or "1/2-1/2"
-                string eco = board.Metadata["ECO"]; // e.g. "D15" // Encyclopaedia of Chess Openings
-                string ecoUrl = board.Metadata["ECOUrl"]; // e.g. "https://www.chess.com/openings/Slav-Defense-Modern-Three-Knights-Variation"
+                string? date = board.GetTag("UTCDate"); // "2023.05.16"
+                string? white = board.GetTag("White"); // username
+                string? black = board.GetTag("Black"); // username
+                string? termination = board.GetTag("Termination"); // "Username won on time"
+                string? result = board.GetTag("Result"); // "0-1" or "1-0" or "1/2-1/2" or "*" (incomplete)
+                string? eco = board.GetTag("ECO"); // e.g. "D15" // Encyclopaedia of Chess Openings
+                string? ecoUrl = board.GetTag("ECOUrl"); // e.g. "https://www.chess.com/openings/Slav-Defense-Modern-Three-Knights-Variation"
                 string ecoText = "";
                 if (cows == "white" || cows == "double") {
                     ecoText = $" - ECO: {ecoUrl} [{eco}]";
@@ -196,15 +205,15 @@ internal class Program {
                 Console.WriteLine($"{date} - {board.Url} - {cows} - {white} v {black} - {termination} ({result}){ecoText}");
 
             } else {
-                string white = board.Metadata["White"]; // username
-                string black = board.Metadata["Black"]; // username
+                string white = board.GetTag("White"); // username
+                string black = board.GetTag("Black"); // username
                 allUsers.Add(white);
                 allUsers.Add(black);
+                string eco = board.GetTag("ECO"); // e.g. "D15"
 
                 //debug
-                //Console.WriteLine("[no cow game]");
-                //string result = board.Metadata["Result"];
-                //Console.WriteLine($"{board.Url} - {result}");
+                string result = board.Tags["Result"];
+                Console.WriteLine($"[no cow game] {board.Url} - {result} - {eco}");
             }
 
         }
