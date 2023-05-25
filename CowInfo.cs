@@ -89,9 +89,14 @@ public class CowInfo {
             string blackPart = "";
             if (PartialWhiteCow) {
                 whitePart = $"white: {WhiteCowCompleteness}/6 in {CowWhite?.LastMove?.moveNumber}";
+                if (CowWhiteKingSide.SeenMoves.Length >= 3) whitePart += $" K[{CowWhiteKingSide.LastMove?.moveNumber}]"; //  " ♚";
+                if (CowWhiteQueenSide.SeenMoves.Length >= 3) whitePart += $" Q[{CowWhiteQueenSide.LastMove?.moveNumber}]"; //  " ♛";
             }
-            if (PartialBlackCow) blackPart = $"black: {BlackCowCompleteness}/6 in {CowBlack?.LastMove?.moveNumber}";
-            string both = "";
+            if (PartialBlackCow) {
+                blackPart = $"black: {BlackCowCompleteness}/6 in {CowBlack?.LastMove?.moveNumber}";
+                if (CowBlackKingSide.SeenMoves.Length >= 3) blackPart += $" k[{CowBlackKingSide.LastMove?.moveNumber}]"; // " ♔";
+                if (CowBlackQueenSide.SeenMoves.Length >= 3) blackPart += $" q[{CowBlackQueenSide.LastMove?.moveNumber}]"; //  " ♕";
+            }
             if (whitePart != "" && blackPart != "")
                 return $"partial cows ({whitePart}; {blackPart})";
             else

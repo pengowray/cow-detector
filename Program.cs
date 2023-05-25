@@ -66,27 +66,49 @@ internal class Program {
         //string arenaId = "early-titled-tuesday-blitz-may-16-2023-4020317"; // [no cows] https://www.chess.com/tournament/live/early-titled-tuesday-blitz-may-16-2023-4020317
         //string arenaId = "cramling-tuesday-2699599";
         //string arenaId = "crazy-bullet-2699632";
-        string arenaId = "early-titled-tuesday-blitz-may-23-2023-4033933"; // older rounds seem to disappear? // blob:https://www.chess.com/d366c5eb-14f2-4675-98e6-35c2a2ffdbd0
+        //string arenaId = "early-titled-tuesday-blitz-may-23-2023-4033933"; // older rounds seem to disappear? // blob:https://www.chess.com/d366c5eb-14f2-4675-98e6-35c2a2ffdbd0
+        string arenaId = "late-titled-tuesday-blitz-may-23-2023-4033934"; // https://api.chess.com/pub/tournament/late-titled-tuesday-blitz-may-23-2023-4033934
         //string arenaId = "-33rd-chesscom-quick-knockouts-1401-1600"; // old example
         string endpoint = "https://api.chess.com/pub/tournament/{0}"; // url-id
-        string url = string.Format(endpoint, arenaId);
+        //string url = string.Format(endpoint, arenaId);
         //string url = "https://api.chess.com/pub/player/theultimatecow/games/2023/05";
         //string url = "https://api.chess.com/pub/player/MagnusCarlsen/games/2023/05";
         //string url = "https://api.chess.com/pub/player/mobamba604/games/2023/05"; // https://www.chess.com/players/andrea-botez
         //string url = "https://api.chess.com/pub/player/alexandrabotez/games/2023/05";
+        //string url = "https://api.chess.com/pub/player/themagician/games/2023/05";//FM John Curtis Australia
         //string url = "https://api.chess.com/pub/player/hikaru/games/2023/05";
-        //string url = "https://api.chess.com/pub/player/chessbruh/games/2023/05";
+        //string url = "https://api.chess.com/pub/player/thechesstina/games/2023/05";
+        //string url = "https://api.chess.com/pub/player/laurarrgh/games/2023/05";
+        //string url = "https://api.chess.com/pub/player/gmbenjaminfinegold/games/2023/05"; // https://www.twitch.tv/itsbenandkaren
+        //string url = "https://api.chess.com/pub/player/DanielNaroditsky/games/2023/05"; // https://www.twitch.tv/gmnaroditsky
+        //string url = "https://api.chess.com/pub/player/KNVB/games/2023/05"; // chessbruh / Aman Hambleton -- beat a cow
         //string url = "https://api.chess.com/pub/player/dinabelenkaya/games/2023/05";
-        //string url = "https://api.chess.com/pub/player/gothamchess/games/2023/05";
+        string url = "https://api.chess.com/pub/player/gothamchess/games/2023/05";
         Console.WriteLine("url: " + url);
 
         //var games = AllGamesFromUrlAsync(url);
+
         // no cows
-        var games = AllGamesFromEventMultiPgnFile(@"C:\temp\Early-Titled-Tuesday-Blitz-May-23-2023_2023-05-24-01-00.pgn");
+        //var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\Early-Titled-Tuesday-Blitz-May-23-2023_2023-05-24-01-00.pgn");
+        //var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\Late-Titled-Tuesday-Blitz-May-23-2023_2023-05-24-07-00.pgn");
+
+        // lichess
+        // https://lichess.org/api/games/user/{username}
+        //var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\lichess_jjosujjosu_2023-05-24.pgn");
+        //var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\lichess_DrNykterstein_2023-05-24.pgn"); // https://lichess.org/api/games/user/DrNykterstein // DrNykterstein;Magnus Carlsen;2863
+        // => https://lichess.org/UemmwQwt 
+        var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\lichess_penguingim1_2023-05-24.pgn"); // https://www.twitch.tv/penguingm1/
+        // => https://lichess.org/cKUFqHRw tortured complete cow on move 13 - partial cow (white: 6/6 in 13 K[3] Q[13]) - arian95 v penguingim1 (0-1)
+        // => https://lichess.org/V0ZReyC4 complete cow on final move
+        // => https://lichess.org/Ko5VCJpa cow completed with king's knight for both sides - (K[14] Q[31]) - penguingim1 v NoTheories (0-1)
+        //var games = AllGamesFromEventMultiPgnFile(@""
+        //AnishGiri;Anish Giri;2764
+        //STL_Caruana;Fabiano Caruana;2835
+        //STL_Dominguez;Dominguez Perez, Leinier;2758
 
         CowStats stats = new();
         await foreach (var game in games) {
-            stats.UpdateWithCows(game);
+            stats.UpdateWithCows(game, showCowless: false);
         }
 
         stats.PrintStats();
@@ -98,24 +120,28 @@ internal class Program {
     }
 
     public static async IAsyncEnumerable<ParsedPGN> AllGamesFromEventMultiPgnFile(string file) {
-        //TODO: make less scuffed (check for start of "[" block instead of "[Event"
+        //TODO: make less scuffed (check for start of "[" block instead of "[Event", but this works for lichess and chess.com examples i've seen so far)
         StringBuilder sb = new StringBuilder();
         int entryCount = 0;
+        int lineNumber = 1;
+        int sbLineNumber = 1;
         using (var reader = System.IO.File.OpenText(file)) {
             string line;
             while ((line = await reader.ReadLineAsync()) != null) {
                 if (line.StartsWith("[Event")) {
                     if (sb.Length > 0) {
-                        yield return new ParsedPGN($"file://{file}/{entryCount}", sb.ToString());
+                        yield return new ParsedPGN($"file://{file}#{sbLineNumber} (game {entryCount})", sb.ToString());
                         sb.Clear();
                         entryCount++;
+                        sbLineNumber = lineNumber;
                     }
                 }
-                sb.AppendLine(line); 
+                sb.AppendLine(line);
+                lineNumber++;
             }
         }
         if (sb.Length > 0) {
-            yield return new ParsedPGN($"file://{file}/{entryCount}", sb.ToString());
+            yield return new ParsedPGN($"file://{file}#{sbLineNumber} (game {entryCount})", sb.ToString());
         }
     }
 

@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.Design;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -31,7 +29,7 @@ public class CowStats {
     public HashSet<string> cowUser = new();
     public HashSet<string> allUsers = new();
 
-    public void UpdateWithCows(ParsedPGN board) {
+    public void UpdateWithCows(ParsedPGN board, bool showCowless = false) {
         var cows = board.Cows();
 
         totalGames++;
@@ -57,9 +55,11 @@ public class CowStats {
             string? eco = board.GetTag("ECO"); // e.g. "D15" // Encyclopaedia of Chess Openings
             string? ecoUrl = board.GetTag("ECOUrl"); // e.g. "https://www.chess.com/openings/Slav-Defense-Modern-Three-Knights-Variation"
             string ecoText = "";
+            string? site = board.GetTag("Site"); // for lichess links to game: "https://lichess.org/78HRmFuB", for chess.com it's just "Chess.com"
 
             if (cows.HasWhiteCow) {
-                ecoText = $" - ECO: {ecoUrl} [{eco}]";
+                //ecoText = $" - ECO: {ecoUrl} [{eco}]";
+                ecoText = $" - [{eco}]";
             }
             allUsers.Add(white);
             allUsers.Add(black);
@@ -90,14 +90,16 @@ public class CowStats {
                 cowIncomplete++;
             }
 
-            Console.WriteLine($"{date} - {board.Url} - {cows} - {white} v {black} ({result}) - {termination}{ecoText}");
+            Console.WriteLine($"{date} - {board.Url} - {cows} - {white} v {black} ({result}) - {termination}{ecoText} - {site}");
+
         } else if (cows.HasPartialCows) {
             string? white = board.GetTag("White"); // username
             string? black = board.GetTag("Black"); // username
             string? eco = board.GetTag("ECO"); // e.g. "D15" // Encyclopaedia of Chess Openings
-            string result = board.GetTag("Result");
+            string? result = board.GetTag("Result");
+            string? site = board.GetTag("Site"); 
 
-            Console.WriteLine($"[Partial cow(s)] {board.Url} - {cows} - {white} v {black} ({result}) - [{eco}]");
+            Console.WriteLine($"[Partial cow(s)] {board.Url} - {cows} - {white} v {black} ({result}) - [{eco}] - {site}");
             partialCow++;
 
         } else {
@@ -110,7 +112,7 @@ public class CowStats {
 
             //debug
             ///last move so i can see it parsed
-            Console.WriteLine($"[no cow] {board.Url} - {white} v {black} ({result}) - [{eco}] - Final:{board?.Moves?.LastOrDefault()}");
+            if (showCowless) Console.WriteLine($"[no cow] {board.Url} - {white} v {black} ({result}) - [{eco}] - Final:{board?.Moves?.LastOrDefault()}");
         }
 
     }

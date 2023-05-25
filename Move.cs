@@ -15,6 +15,7 @@ public class Move {
     //TODO: Cleanup / normalize:
     // - normalize unicode characters (e.g. ♘ to N) -- ♙♘♗♖♕♔♚♛♜♝♞♟
     // - castling with 0's (0-0 or 0-0-0)
+    // - normalize case
 
     //TODO: support other bits of algebraic notation: 
     //presumably should be in comments though?
@@ -22,12 +23,19 @@ public class Move {
     // - long algebraic notation (LAN) with a hyphen
     // - "!!" (brilliant move) etc
 
+    //TODO: support notation used in UCI https://backscattering.de/chess/uci/
+    // - long algebraic notation
+    // - e7e8q (for promotion) 
+    // - e1g1 (white short castling)
+    // - 0000 (nullmove)
+
     // see:
     // https://en.wikipedia.org/wiki/Portable_Game_Notation
     // https://en.wikipedia.org/wiki/Algebraic_notation_(chess)
     // https://en.wikipedia.org/wiki/Chess_notation
     // https://en.wikipedia.org/wiki/Chess_annotation_symbols
     // https://en.wikipedia.org/wiki/Chess_symbols_in_Unicode
+    // https://en.wikipedia.org/wiki/Universal_Chess_Interface
 
     private static readonly Regex MoveParts = new Regex(@"(O-O|O-O-O|([PNBRQK]?)([a-h]?[1-8]?)(x)?([a-h][1-8])(?:=?([NBRQ]))?(\+|#)?)", RegexOptions.Compiled);
 
