@@ -98,10 +98,13 @@ internal class Program {
         //var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\lichess_DrNykterstein_2023-05-24.pgn"); // https://lichess.org/api/games/user/DrNykterstein // DrNykterstein;Magnus Carlsen;2863
         // => https://lichess.org/UemmwQwt 
         var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\lichess_penguingim1_2023-05-24.pgn"); // https://www.twitch.tv/penguingm1/
+        //var games = AllGamesFromEventMultiPgnFile(@"c:\pgn\lichess_TSMFTXH_2023-05-25.pgn"); https://lichess.org/api/games/user/tsmftxh // hikaru?
         // => https://lichess.org/cKUFqHRw tortured complete cow on move 13 - partial cow (white: 6/6 in 13 K[3] Q[13]) - arian95 v penguingim1 (0-1)
         // => https://lichess.org/V0ZReyC4 complete cow on final move
         // => https://lichess.org/Ko5VCJpa cow completed with king's knight for both sides - (K[14] Q[31]) - penguingim1 v NoTheories (0-1)
-        //var games = AllGamesFromEventMultiPgnFile(@""
+        //var games = AllGamesFromEventMultiPgnFile(@"c:\pgn\lichess_Ruchess27_2023-05-25.pgn");
+        // => https://lichess.org/qvESzjy9 partial cow (white: 6/6 in 11 K[6] Q[11]) - dragonchess83 v Ruchess27 (0-1) 
+        // => 
         //AnishGiri;Anish Giri;2764
         //STL_Caruana;Fabiano Caruana;2835
         //STL_Dominguez;Dominguez Perez, Leinier;2758

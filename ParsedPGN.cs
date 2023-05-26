@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -38,10 +39,17 @@ namespace BovineChess;
 
 public class ParsedPGN {
     public string Url { get; set; }
-    public string Pgn { get; set; }
+    public string Pgn { get; private set; }
 
     public Dictionary<string, string> Tags { get; private set; }
+
+
     public List<Move> Moves { get; private set; }
+
+    // Found at the end of the moves list: "1-0", "0-1", "1/2-1/2"
+    // If both set, should be same as Tags["Result"]
+    // Should not be set if Tags["Result"] is "*"
+    public string EndResult { get; private set; } 
 
     public ParsedPGN() {
     }
@@ -63,19 +71,21 @@ public class ParsedPGN {
     public void SetPgn(string pgn) {
         Pgn = pgn;
         Tags = ExtractTags(pgn);
-        Moves = ParsePgn(pgn);
+        ParsePgn(pgn);
 
     }
 
     // "1." (white move) or "1..." (black move, optional)
     // the move itself: at least 2 characters; parse later
-    // 
-    private static readonly Regex MovesRegex = new Regex(@"(\d+(\.|\.\.\.))\s+?([a-z0-9A-Z\-\=\+\#]{2,})(\s+{.*?})?\s*", RegexOptions.Compiled | RegexOptions.Multiline);
+    // (?![0-9]\.) -- negative lookahead so "10." is not matched as black's move (after white's move)
+    // RegexOptions.Singleline to allow for newlines (e.g. in comments)
+    // note: \@ is just for Crazy House and Bughouse variations
+    private static readonly Regex MovesRegex = new Regex(@"(?:(?<num>\d+)(?<dots>\.|\.\.\.))(?:\s+(?![0-9]+\.)(?:(?<move>[a-z0-9A-Z][a-z0-9A-Z\-\=\+\#\!\?⌓□∞⩲⩱±∓⯹\(\)\/\@]+)(?:\s+{(?<comment>.*?)})?(?:\s(?<result>0\-1|1\-0|1\/2\-1\/2))?)){1,2}\s*", RegexOptions.Compiled | RegexOptions.Singleline);
 
-    public static List<Move> ParsePgn(string pgn) {
+    public void ParsePgn(string pgn) {
         var lines = pgn.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
         List<Move> moves = new List<Move>();
-        int currentMoveNumber = 1;
+        int currentMoveNumber = 0;
 
         foreach (var line in lines) {
             if (line.StartsWith("[") || line.StartsWith(";")) {
@@ -83,24 +93,55 @@ public class ParsedPGN {
             }
             var matches = MovesRegex.Matches(line);
             foreach (Match match in matches) {
-                bool isBlack = match.Groups[2].Value == "...";
-                if (!isBlack) {
-                    var moveNumberText = match?.Groups[1]?.Value?.Trim('.');
-                    if (moveNumberText != null && int.TryParse(moveNumberText, out int moveNumber)) {
-                        currentMoveNumber = moveNumber;
+                var moveNumText = match.Groups["num"].Value;
+                var dots = match.Groups["dots"].Value;
+                bool isBlack = dots == "...";
+
+                if (moveNumText != null && int.TryParse(moveNumText, out int moveNumber)) {
+                    // TODO: check and report somewhere else instead
+                    if (moveNumber == 0) {
+                        Console.WriteLine($"Warning: Move number is 0: {moveNumber}. (should be 1 or higher); dots: {dots}");
+                    } else if (currentMoveNumber != 0 && moveNumber != currentMoveNumber) {
+                        Console.WriteLine($"Warning: Out of sequence moves: expected:{currentMoveNumber}. found:{moveNumber}. dots: {dots}");
                     }
+                    currentMoveNumber = moveNumber;
                 }
-                string move = match.Groups[3].Value;
-                string comment = match.Groups[6].Value;
 
-                var moveObj = new Move(isBlack, currentMoveNumber, move, comment);
-                moves.Add(moveObj);
+                string move = match.Groups["move"].Captures[0].Value;
+                string? comment = (match.Groups["comment"].Captures.Count > 0) ? match.Groups["comment"].Captures[0].Value : null;
 
-                if (isBlack) currentMoveNumber++;
+                var firstPly = new Move(isBlack, currentMoveNumber, move, comment);
+                moves.Add(firstPly);
+
+
+                bool hasSecondPly = match.Groups["move"].Captures.Count >= 2;
+                
+                if (hasSecondPly && isBlack) {
+                    Console.WriteLine($"Error: Second ply for black move: {currentMoveNumber}... {move}");
+                }
+
+                if (hasSecondPly) {
+                    string movePly2 = match.Groups["move"].Captures[1].Value;
+                    string? commentPly2 = (match.Groups["comment"].Captures.Count > 2) ? match.Groups["comment"].Captures[1].Value : null;
+
+                    var secondPly = new Move(isBlack: true, currentMoveNumber, movePly2, commentPly2);
+                    moves.Add(secondPly);
+
+                    currentMoveNumber++;
+
+                } else if (isBlack) {
+                    currentMoveNumber++;
+                }
+
+                bool hasResult = match.Groups["result"].Captures.Count > 0;
+                if (hasResult) {
+                    var endResult = match.Groups["result"].Captures[0].Value;
+                    if (!string.IsNullOrWhiteSpace(endResult)) EndResult = endResult;
+                }
             }
         }
 
-        return moves;
+        Moves = moves;
     }
 
 

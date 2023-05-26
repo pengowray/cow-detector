@@ -38,6 +38,9 @@ public class CowStats {
             return;
         }
 
+        string variant = board.GetTag("Variant");
+        string nonStandard = (variant == null || variant == "Standard") ? "" : $" (Variant: {variant})";
+
         if (cows.HasCows) {
 
             gamesWithCows++;
@@ -90,16 +93,17 @@ public class CowStats {
                 cowIncomplete++;
             }
 
-            Console.WriteLine($"{date} - {board.Url} - {cows} - {white} v {black} ({result}) - {termination}{ecoText} - {site}");
+            Console.WriteLine($"{date} - {board.Url} - {cows} - {white} v {black} ({result}{nonStandard}) - {termination}{ecoText} - {site}");
 
         } else if (cows.HasPartialCows) {
+            string? date = board.GetTag("UTCDate"); // "2023.05.16"
             string? white = board.GetTag("White"); // username
             string? black = board.GetTag("Black"); // username
             string? eco = board.GetTag("ECO"); // e.g. "D15" // Encyclopaedia of Chess Openings
             string? result = board.GetTag("Result");
             string? site = board.GetTag("Site"); 
 
-            Console.WriteLine($"[Partial cow(s)] {board.Url} - {cows} - {white} v {black} ({result}) - [{eco}] - {site}");
+            Console.WriteLine($"[Partial cow(s)] {date} - {board.Url} - {cows} - {white} v {black} ({result}{nonStandard}) - [{eco}] - {site}");
             partialCow++;
 
         } else {
