@@ -80,10 +80,11 @@ internal class Program {
         //string url = "https://api.chess.com/pub/player/thechesstina/games/2023/05";
         //string url = "https://api.chess.com/pub/player/laurarrgh/games/2023/05";
         //string url = "https://api.chess.com/pub/player/gmbenjaminfinegold/games/2023/05"; // https://www.twitch.tv/itsbenandkaren
-        //string url = "https://api.chess.com/pub/player/DanielNaroditsky/games/2023/05"; // https://www.twitch.tv/gmnaroditsky
+        string url = "https://api.chess.com/pub/player/DanielNaroditsky/games/2023/05"; // https://www.twitch.tv/gmnaroditsky
         //string url = "https://api.chess.com/pub/player/KNVB/games/2023/05"; // chessbruh / Aman Hambleton -- beat a cow
         //string url = "https://api.chess.com/pub/player/dinabelenkaya/games/2023/05";
-        string url = "https://api.chess.com/pub/player/gothamchess/games/2023/05";
+        //string url = "https://api.chess.com/pub/player/gothamchess/games/2023/05";
+        // => https://www.chess.com/game/live/78352375713 // gotham played cow opening (previously reported)
         Console.WriteLine("url: " + url);
 
         //var games = AllGamesFromUrlAsync(url);
@@ -96,8 +97,9 @@ internal class Program {
         // https://lichess.org/api/games/user/{username}
         //var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\lichess_jjosujjosu_2023-05-24.pgn");
         //var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\lichess_DrNykterstein_2023-05-24.pgn"); // https://lichess.org/api/games/user/DrNykterstein // DrNykterstein;Magnus Carlsen;2863
-        // => https://lichess.org/UemmwQwt 
-        var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\lichess_penguingim1_2023-05-24.pgn"); // https://www.twitch.tv/penguingm1/
+        // => https://lichess.org/UemmwQwt
+        // => https://lichess.org/h1CKf15x - partial cow (black: 6/6 in 14 k[8] q[14]) - DrNykterstein v Puddingsjakk (1-0) - [A13]
+        //var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\lichess_penguingim1_2023-05-24.pgn"); // https://www.twitch.tv/penguingm1/
         //var games = AllGamesFromEventMultiPgnFile(@"c:\pgn\lichess_TSMFTXH_2023-05-25.pgn"); https://lichess.org/api/games/user/tsmftxh // hikaru?
         // => https://lichess.org/cKUFqHRw tortured complete cow on move 13 - partial cow (white: 6/6 in 13 K[3] Q[13]) - arian95 v penguingim1 (0-1)
         // => https://lichess.org/V0ZReyC4 complete cow on final move
@@ -108,6 +110,9 @@ internal class Program {
         //AnishGiri;Anish Giri;2764
         //STL_Caruana;Fabiano Caruana;2835
         //STL_Dominguez;Dominguez Perez, Leinier;2758
+
+        //https://www.pgnmentor.com/files.html
+        var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\Carlsen.pgn");
 
         CowStats stats = new();
         await foreach (var game in games) {

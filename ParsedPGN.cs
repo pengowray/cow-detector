@@ -80,65 +80,70 @@ public class ParsedPGN {
     // (?![0-9]\.) -- negative lookahead so "10." is not matched as black's move (after white's move)
     // RegexOptions.Singleline to allow for newlines (e.g. in comments)
     // note: \@ is just for Crazy House and Bughouse variations
-    private static readonly Regex MovesRegex = new Regex(@"(?:(?<num>\d+)(?<dots>\.|\.\.\.))(?:\s+(?![0-9]+\.)(?:(?<move>[a-z0-9A-Z][a-z0-9A-Z\-\=\+\#\!\?⌓□∞⩲⩱±∓⯹\(\)\/\@]+)(?:\s+{(?<comment>.*?)})?(?:\s(?<result>0\-1|1\-0|1\/2\-1\/2))?)){1,2}\s*", RegexOptions.Compiled | RegexOptions.Singleline);
+    private static readonly Regex MovesRegex = new Regex(@"((?<num>\d+)(?<dots>\.|\.\.\.))(\s+(?![0-9]+\.)((?<move>[a-z0-9A-Z][a-z0-9A-Z\-\=\+\#\!\?⌓□∞⩲⩱±∓⯹\(\)\/\@]+)(\s+{(?<comment>.*?)})?(\s+(?<result>0\-1|1\-0|1\/2\-1\/2))?)){1,2}\s*", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.ExplicitCapture);
 
     public void ParsePgn(string pgn) {
         var lines = pgn.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
         List<Move> moves = new List<Move>();
         int currentMoveNumber = 0;
 
+        StringBuilder sb = new StringBuilder();
         foreach (var line in lines) {
             if (line.StartsWith("[") || line.StartsWith(";")) {
                 continue;
             }
-            var matches = MovesRegex.Matches(line);
-            foreach (Match match in matches) {
-                var moveNumText = match.Groups["num"].Value;
-                var dots = match.Groups["dots"].Value;
-                bool isBlack = dots == "...";
+            sb.AppendLine(line);
+        }
+        string full = sb.ToString();
 
-                if (moveNumText != null && int.TryParse(moveNumText, out int moveNumber)) {
-                    // TODO: check and report somewhere else instead
-                    if (moveNumber == 0) {
-                        Console.WriteLine($"Warning: Move number is 0: {moveNumber}. (should be 1 or higher); dots: {dots}");
-                    } else if (currentMoveNumber != 0 && moveNumber != currentMoveNumber) {
-                        Console.WriteLine($"Warning: Out of sequence moves: expected:{currentMoveNumber}. found:{moveNumber}. dots: {dots}");
-                    }
-                    currentMoveNumber = moveNumber;
+        var matches = MovesRegex.Matches(full);
+        foreach (Match match in matches) {
+            var moveNumText = match.Groups["num"].Value;
+            var dots = match.Groups["dots"].Value;
+            bool isBlack = dots == "...";
+
+            if (moveNumText != null && int.TryParse(moveNumText, out int moveNumber)) {
+                // TODO: check and report somewhere else instead
+                if (moveNumber == 0) {
+                    Console.WriteLine($"Warning: Move number is 0: {moveNumber}. (should be 1 or higher); dots: {dots}");
+                } else if (currentMoveNumber != 0 && moveNumber != currentMoveNumber) {
+                    Console.WriteLine($"Warning: Out of sequence moves: expected:{currentMoveNumber}. found:{moveNumber}. dots: {dots}");
+                    Console.WriteLine("- Moves so far: " + string.Join("; ", moves));
                 }
-
-                string move = match.Groups["move"].Captures[0].Value;
-                string? comment = (match.Groups["comment"].Captures.Count > 0) ? match.Groups["comment"].Captures[0].Value : null;
-
-                var firstPly = new Move(isBlack, currentMoveNumber, move, comment);
-                moves.Add(firstPly);
-
-
-                bool hasSecondPly = match.Groups["move"].Captures.Count >= 2;
-                
-                if (hasSecondPly && isBlack) {
-                    Console.WriteLine($"Error: Second ply for black move: {currentMoveNumber}... {move}");
-                }
-
-                if (hasSecondPly) {
-                    string movePly2 = match.Groups["move"].Captures[1].Value;
-                    string? commentPly2 = (match.Groups["comment"].Captures.Count > 2) ? match.Groups["comment"].Captures[1].Value : null;
-
-                    var secondPly = new Move(isBlack: true, currentMoveNumber, movePly2, commentPly2);
-                    moves.Add(secondPly);
-
-                    currentMoveNumber++;
-
-                } else if (isBlack) {
-                    currentMoveNumber++;
-                }
-
-                bool hasResult = match.Groups["result"].Captures.Count > 0;
-                if (hasResult) {
-                    var endResult = match.Groups["result"].Captures[0].Value;
-                    if (!string.IsNullOrWhiteSpace(endResult)) EndResult = endResult;
-                }
+                currentMoveNumber = moveNumber;
             }
+
+            string move = match.Groups["move"].Captures[0].Value;
+            string? comment = (match.Groups["comment"].Captures.Count > 0) ? match.Groups["comment"].Captures[0].Value : null;
+
+            var firstPly = new Move(isBlack, currentMoveNumber, move, comment);
+            moves.Add(firstPly);
+
+            bool hasSecondPly = match.Groups["move"].Captures.Count >= 2;
+                
+            if (hasSecondPly && isBlack) {
+                Console.WriteLine($"Error: Second ply for black move: {currentMoveNumber}... {move}");
+            }
+
+            if (hasSecondPly) {
+                string movePly2 = match.Groups["move"].Captures[1].Value;
+                string? commentPly2 = (match.Groups["comment"].Captures.Count > 2) ? match.Groups["comment"].Captures[1].Value : null;
+
+                var secondPly = new Move(isBlack: true, currentMoveNumber, movePly2, commentPly2);
+                moves.Add(secondPly);
+
+                currentMoveNumber++;
+
+            } else if (isBlack) {
+                currentMoveNumber++;
+            }
+
+            bool hasResult = match.Groups["result"].Captures.Count > 0;
+            if (hasResult) {
+                var endResult = match.Groups["result"].Captures[0].Value;
+                if (!string.IsNullOrWhiteSpace(endResult)) EndResult = endResult;
+            }
+            
         }
 
         Moves = moves;

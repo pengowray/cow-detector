@@ -69,7 +69,7 @@ public class Move {
     }
 
     public override string ToString() {
-        return $"{moveNumber}{(isBlack ? "..." : ".")} {move}{(comment != "" ? $" {comment}" : "")}";
+        return $"{moveNumber}{(isBlack ? "..." : ".")} {move}{(comment != "" ? $" {{{comment}}}" : "")}";
     }
 
 
