@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -26,16 +27,21 @@ public class CowStats {
     public int partialCow;
     public int[] cowAmounts = new int[7];
 
-    public HashSet<string> cowUser = new();
     public HashSet<string> allUsers = new();
+    public HashSet<string> cowUser = new();
+    public HashSet<string> partialCowUser = new();
 
-    public void UpdateWithCows(ParsedPGN board, bool showCowless = false) {
+    public CowInfo UpdateWithCows(ParsedPGN board, bool showCowless = false) {
         var cows = board.Cows();
 
         totalGames++;
 
         if (cows == null) {
-            return;
+            return null;
+        }
+
+        if (board == null) {
+            return null;
         }
 
         string variant = board.GetTag("Variant");
@@ -58,7 +64,7 @@ public class CowStats {
             string? eco = board.GetTag("ECO"); // e.g. "D15" // Encyclopaedia of Chess Openings
             string? ecoUrl = board.GetTag("ECOUrl"); // e.g. "https://www.chess.com/openings/Slav-Defense-Modern-Three-Knights-Variation"
             string ecoText = "";
-            string? site = board.GetTag("Site"); // for lichess links to game: "https://lichess.org/78HRmFuB", for chess.com it's just "Chess.com"
+            string? site = board.GetUniqueUrl(); // board.GetTag("Site"); 
 
             if (cows.HasWhiteCow) {
                 //ecoText = $" - ECO: {ecoUrl} [{eco}]";
@@ -101,7 +107,13 @@ public class CowStats {
             string? black = board.GetTag("Black"); // username
             string? eco = board.GetTag("ECO"); // e.g. "D15" // Encyclopaedia of Chess Openings
             string? result = board.GetTag("Result");
-            string? site = board.GetTag("Site"); 
+            string? site = board.GetUniqueUrl(); // board.GetTag("Site"); 
+
+            if (cows.PartialBlackCow) {
+                partialCowUser.Add(black);
+            } else if (cows.PartialWhiteCow) {
+                partialCowUser.Add(white);
+            }
 
             Console.WriteLine($"[Partial cow(s)] {date} - {board.Url} - {cows} - {white} v {black} ({result}{nonStandard}) - [{eco}] - {site}");
             partialCow++;
@@ -119,6 +131,8 @@ public class CowStats {
             if (showCowless) Console.WriteLine($"[no cow] {board.Url} - {white} v {black} ({result}) - [{eco}] - Final:{board?.Moves?.LastOrDefault()}");
         }
 
+        return cows;
+
     }
 
     public void PrintStats() {
@@ -126,8 +140,8 @@ public class CowStats {
         Console.WriteLine($" - total games: {totalGames}; games with cows: {gamesWithCows}, including {doubleCows} with double cows for a total of {totalCows} cows.");
         Console.WriteLine($" - games with one cow: Cow wins/losses/draws: {cowWins}/{cowLosses}/{cowDraws}");
         Console.WriteLine($" - white cows: {whiteCows}; black cows: {blackCows}");
-        Console.WriteLine($" - total players: {allUsers.Count()}; players who used cow opening at least once: {cowUser.Count()} ({percent:P2})");
-        Console.WriteLine($" - games with no full cows but some partial cow: {partialCow}");
+        Console.WriteLine($" - total players: {allUsers.Count()}; players who used cow opening at least once: {cowUser.Count()} ({percent:P2}) " + string.Join(" ", cowUser.OrderBy(u => u)));
+        Console.WriteLine($" - games with no full cows but some partial cow: {partialCow}. Partial cow players (if any): " + string.Join(" ", partialCowUser.OrderBy(u => u)));
     }
 
 }

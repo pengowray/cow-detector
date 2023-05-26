@@ -26,6 +26,7 @@ public class CowInfo {
     // related named openings:
     // - Van't Kruijs Opening: d3 (ECO)
     // - Mieses Opening: e3 (ECO)
+    // - Valencia Opening: d3 e5 Nd2
     // - Hippopotamus Defense
     // - The Defense Game by PAFU (2002) www.beginnersgame.com - 8 move openings
 
@@ -53,11 +54,14 @@ public class CowInfo {
     public bool HasCows => HasWhiteCow || HasBlackCow;
     public int CowCount => (HasWhiteCow ? 1 : 0) + (HasBlackCow ? 1 : 0);
 
-    public int WhiteCowCompleteness => CowWhite.SeenMoves.Length;
-    public int BlackCowCompleteness => CowBlack.SeenMoves.Length;
+    public int WhiteCowCompleteness => CowWhite.Seen.Length;
+    public int BlackCowCompleteness => CowBlack.Seen.Length;
 
-    public bool PartialWhiteCow => CowWhite.SeenNoBreaks.Length >= 3;
-    public bool PartialBlackCow => CowBlack.SeenNoBreaks.Length >= 3;
+    //TODO: more flexible with partial cow: complete one side, slow cow < 12 moves, 5/6 cow, etc?
+    // was: PartialWhiteCow => CowWhite.SeenNoBreaks.Length >= 3;
+    // now it's more slowCow than partialCow
+    public bool PartialWhiteCow => (CowWhite.Seen.Length >= 6 && CowWhite.LastMove.moveNumber <= 12) || (CowWhite.Seen.Length >= 5 && CowWhite.LastMove.moveNumber <= 7);
+    public bool PartialBlackCow => (CowBlack.Seen.Length >= 6 && CowBlack.LastMove.moveNumber <= 12) || (CowBlack.Seen.Length >= 5 && CowBlack.LastMove.moveNumber <= 7);
 
     public bool HasPartialCows => PartialWhiteCow || PartialBlackCow;
 
@@ -85,17 +89,18 @@ public class CowInfo {
                 return HasWhiteCow ? "white cow" : "black cow";
             }
         } else if (HasPartialCows) {
+            // TODO: show as chronological: when were milestones hit
             string whitePart = "";
             string blackPart = "";
             if (PartialWhiteCow) {
                 whitePart = $"white: {WhiteCowCompleteness}/6 in {CowWhite?.LastMove?.moveNumber}";
-                if (CowWhiteKingSide.SeenMoves.Length >= 3) whitePart += $" K[{CowWhiteKingSide.LastMove?.moveNumber}]"; //  " ♚";
-                if (CowWhiteQueenSide.SeenMoves.Length >= 3) whitePart += $" Q[{CowWhiteQueenSide.LastMove?.moveNumber}]"; //  " ♛";
+                if (CowWhiteKingSide.Seen.Length >= 3) whitePart += $" K[{CowWhiteKingSide.LastMove?.moveNumber}]"; //  " ♚";
+                if (CowWhiteQueenSide.Seen.Length >= 3) whitePart += $" Q[{CowWhiteQueenSide.LastMove?.moveNumber}]"; //  " ♛";
             }
             if (PartialBlackCow) {
                 blackPart = $"black: {BlackCowCompleteness}/6 in {CowBlack?.LastMove?.moveNumber}";
-                if (CowBlackKingSide.SeenMoves.Length >= 3) blackPart += $" k[{CowBlackKingSide.LastMove?.moveNumber}]"; // " ♔";
-                if (CowBlackQueenSide.SeenMoves.Length >= 3) blackPart += $" q[{CowBlackQueenSide.LastMove?.moveNumber}]"; //  " ♕";
+                if (CowBlackKingSide.Seen.Length >= 3) blackPart += $" k[{CowBlackKingSide.LastMove?.moveNumber}]"; // " ♔";
+                if (CowBlackQueenSide.Seen.Length >= 3) blackPart += $" q[{CowBlackQueenSide.LastMove?.moveNumber}]"; //  " ♕";
             }
             if (whitePart != "" && blackPart != "")
                 return $"partial cows ({whitePart}; {blackPart})";

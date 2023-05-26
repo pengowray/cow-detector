@@ -38,6 +38,11 @@ using System.Threading.Tasks;
 namespace BovineChess;
 
 public class ParsedPGN {
+    /// <summary>
+    /// url this file was retrieved from. May include free text. Might end with #[line number] if it was retrieved from a multi-game file.
+    /// Use GetUniqueUrl() to get a url to view the game itself
+    /// TODO: better names / system
+    /// </summary>
     public string Url { get; set; }
     public string Pgn { get; private set; }
 
@@ -68,6 +73,28 @@ public class ParsedPGN {
         return null;
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <returns>the game's unique url, if available</returns>
+    public string? GetUniqueUrl() {
+        // [LichessURL] is used by later files in Lichess Elite Database <https://database.nikonoel.fr/> instead of [Site] because SCID (Shane's Chess Information Database) can't handle too many unique site fields
+
+        // for lichess [Site] is like: "https://lichess.org/78HRmFuB", for chess.com it's just always "Chess.com"
+
+        var url = GetTag("LichessURL") ?? GetTag("Site");
+        if (string.IsNullOrWhiteSpace(url)) {
+            return null;
+        }
+        string lower = url.ToLowerInvariant();
+        if (lower == "https://lichess.org/" || lower == "Chess.com" || lower == "lichess.org") {
+            // not unique
+            //TODO: better handling of generic urls
+            return null;
+        }
+        return url;
+    }
+
     public void SetPgn(string pgn) {
         Pgn = pgn;
         Tags = ExtractTags(pgn);
@@ -77,10 +104,12 @@ public class ParsedPGN {
 
     // "1." (white move) or "1..." (black move, optional)
     // the move itself: at least 2 characters; parse later
-    // (?![0-9]\.) -- negative lookahead so "10." is not matched as black's move (after white's move)
+    // (?![0-9]\.) is a negative lookahead so "10." is not matched as black's move (after white's move)
     // RegexOptions.Singleline to allow for newlines (e.g. in comments)
     // note: \@ is just for Crazy House and Bughouse variations
-    private static readonly Regex MovesRegex = new Regex(@"((?<num>\d+)(?<dots>\.|\.\.\.))(\s+(?![0-9]+\.)((?<move>[a-z0-9A-Z][a-z0-9A-Z\-\=\+\#\!\?⌓□∞⩲⩱±∓⯹\(\)\/\@]+)(\s+{(?<comment>.*?)})?(\s+(?<result>0\-1|1\-0|1\/2\-1\/2))?)){1,2}\s*", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.ExplicitCapture);
+    // "--" and single letter moves e.g. "R" are for The Week in Chess (twic) PGNs which have missing, partial or null moves recorded
+
+    private static readonly Regex MovesRegex = new Regex(@"((?<num>\d+)(?<dots>\.|\.\.\.))(\s+(?![0-9]+\.)((?<move>(O-O(-O)?|0-0(-0)?|\-\-|[a-zA-Z][a-z0-9A-Z\@]?)[a-z0-9A-Z\-\=\+\#\!\?⌓□∞⩲⩱±∓⯹\(\)\/\@]*)(\s+{(?<comment>.*?)})?(\s+(?<result>0\-1|1\-0|1\/2\-1\/2))?)){1,2}\s*", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.ExplicitCapture);
 
     public void ParsePgn(string pgn) {
         var lines = pgn.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
@@ -108,26 +137,27 @@ public class ParsedPGN {
                     Console.WriteLine($"Warning: Move number is 0: {moveNumber}. (should be 1 or higher); dots: {dots}");
                 } else if (currentMoveNumber != 0 && moveNumber != currentMoveNumber) {
                     Console.WriteLine($"Warning: Out of sequence moves: expected:{currentMoveNumber}. found:{moveNumber}. dots: {dots}");
-                    Console.WriteLine("- Moves so far: " + string.Join("; ", moves));
+                    Console.WriteLine("- Moves so far: " + string.Join(" ", moves));
+                    Console.WriteLine("- Url: " + Url);
+                    Console.WriteLine("- Full pgn:\n" + pgn);
                 }
                 currentMoveNumber = moveNumber;
             }
 
             string move = match.Groups["move"].Captures[0].Value;
-            string? comment = (match.Groups["comment"].Captures.Count > 0) ? match.Groups["comment"].Captures[0].Value : null;
+            string? comment = (match.Groups["comment"].Captures.Count >= 1) ? match.Groups["comment"].Captures[0].Value : null;
 
             var firstPly = new Move(isBlack, currentMoveNumber, move, comment);
             moves.Add(firstPly);
 
             bool hasSecondPly = match.Groups["move"].Captures.Count >= 2;
-                
             if (hasSecondPly && isBlack) {
                 Console.WriteLine($"Error: Second ply for black move: {currentMoveNumber}... {move}");
             }
 
             if (hasSecondPly) {
                 string movePly2 = match.Groups["move"].Captures[1].Value;
-                string? commentPly2 = (match.Groups["comment"].Captures.Count > 2) ? match.Groups["comment"].Captures[1].Value : null;
+                string? commentPly2 = (match.Groups["comment"].Captures.Count >= 2) ? match.Groups["comment"].Captures[1].Value : null;
 
                 var secondPly = new Move(isBlack: true, currentMoveNumber, movePly2, commentPly2);
                 moves.Add(secondPly);

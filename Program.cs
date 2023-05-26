@@ -1,10 +1,8 @@
-﻿using System.Net;
-using System.Net.NetworkInformation;
+﻿using System.IO.Compression;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
-using static System.Net.WebRequestMethods;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace BovineChess;
 internal class Program {
@@ -85,7 +83,7 @@ internal class Program {
         //string url = "https://api.chess.com/pub/player/dinabelenkaya/games/2023/05";
         //string url = "https://api.chess.com/pub/player/gothamchess/games/2023/05";
         // => https://www.chess.com/game/live/78352375713 // gotham played cow opening (previously reported)
-        Console.WriteLine("url: " + url);
+        //Console.WriteLine("url: " + url);
 
         //var games = AllGamesFromUrlAsync(url);
 
@@ -100,6 +98,7 @@ internal class Program {
         // => https://lichess.org/UemmwQwt
         // => https://lichess.org/h1CKf15x - partial cow (black: 6/6 in 14 k[8] q[14]) - DrNykterstein v Puddingsjakk (1-0) - [A13]
         //var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\lichess_penguingim1_2023-05-24.pgn"); // https://www.twitch.tv/penguingm1/
+        
         //var games = AllGamesFromEventMultiPgnFile(@"c:\pgn\lichess_TSMFTXH_2023-05-25.pgn"); https://lichess.org/api/games/user/tsmftxh // hikaru?
         // => https://lichess.org/cKUFqHRw tortured complete cow on move 13 - partial cow (white: 6/6 in 13 K[3] Q[13]) - arian95 v penguingim1 (0-1)
         // => https://lichess.org/V0ZReyC4 complete cow on final move
@@ -111,34 +110,96 @@ internal class Program {
         //STL_Caruana;Fabiano Caruana;2835
         //STL_Dominguez;Dominguez Perez, Leinier;2758
 
-        //https://www.pgnmentor.com/files.html
-        var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\Carlsen.pgn");
+        //general pgn files, e.g. https://www.pgnmentor.com/files.html
+        //var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\Carlsen.pgn");
+        var games = AllGamesFromZipFile(@"C:\pgn\pgnfiles\Giri.zip");
+        //var games = AllGamesFromFolder(@"C:\pgn\pgnfiles");
+        //var games = AllGamesFromZipFile(@"C:\pgn\elite\LichessEliteDatabase.zip");
+        //var games = AllGamesFromFolder(@"C:\pgn\twic");
 
-        CowStats stats = new();
-        await foreach (var game in games) {
-            stats.UpdateWithCows(game, showCowless: false);
+        var outputPgn = @"c:\pgn\output\cows.pgn";
+        var outputPgnPart = @"c:\pgn\output\partial-cows.pgn";
+
+        using (StreamWriter outputFile = new StreamWriter(outputPgn))
+        using (StreamWriter outputFile2 = new StreamWriter(outputPgnPart)) {
+
+            CowStats stats = new();
+            await foreach (var game in games) {
+                //await Console.Out.WriteLineAsync(game.Url);
+                var cows = stats.UpdateWithCows(game, showCowless: false);
+                if (cows?.HasCows ?? false) {
+                    outputFile?.WriteLineAsync(game.Pgn.TrimEnd());
+                    outputFile?.WriteLineAsync();
+                    outputFile?.WriteLineAsync();
+                    outputFile?.Flush();
+                } else if (cows?.HasPartialCows ?? false) {
+                    outputFile2?.WriteLineAsync(game.Pgn.TrimEnd());
+                    outputFile2?.WriteLineAsync();
+                    outputFile2?.WriteLineAsync();
+                    outputFile2?.Flush();
+                }
+            }
+
+            stats.PrintStats();
+
+            outputFile?.Flush();
+            outputFile?.Close();
+
+            outputFile2?.Flush();
+            outputFile2?.Close();
         }
 
-        stats.PrintStats();
 
         //{"name":"CRAMLING BULLET","url":"https://www.chess.com/tournament/live/arena/cramling-bullet-2697041","creator":"annacramling","status":"finished","start_time":1684245313,"finish_time":1684247113,"settings":{"type":"standard","rules":"chess","is_rated":true,"is_official":false,"is_invite_only":false,"user_advance_count":1,"winner_places":3,"registered_user_count":207,"total_rounds":1,"time_class":"lightning","time_control":"60+0"},"players":[{"username":"notsofastyt","status":"winner"},{"username":"tormikull06","status":"registered"},
         // ...
         // "rounds":["https://api.chess.com/pub/tournament/cramling-bullet-2697041/1"]}
 
     }
+    public static async IAsyncEnumerable<ParsedPGN> AllGamesFromFolder(string folder) {
+        // read all zip or pgn files in folder
+        // todo: optionally recurse into subfolders
 
-    public static async IAsyncEnumerable<ParsedPGN> AllGamesFromEventMultiPgnFile(string file) {
-        //TODO: make less scuffed (check for start of "[" block instead of "[Event", but this works for lichess and chess.com examples i've seen so far)
+        foreach (var file in Directory.EnumerateFiles(folder)) {
+            if (file.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) {
+                await foreach (var game in AllGamesFromZipFile(file)) {
+                    yield return game;
+                }
+            } else if (file.EndsWith(".pgn", StringComparison.OrdinalIgnoreCase)) {
+                await foreach (var game in AllGamesFromEventMultiPgnFile(file)) {
+                    yield return game;
+                }
+            } 
+        }
+    }
+
+    public static async IAsyncEnumerable<ParsedPGN> AllGamesFromZipFile(string file) {
+        using (var archive = ZipFile.OpenRead(file)) {
+            foreach (var entry in archive.Entries) {
+                if (entry.FullName.EndsWith(".pgn", StringComparison.OrdinalIgnoreCase)) {
+                    var fileStream = new StreamReader(entry.Open());
+                    using (fileStream) {
+                        var all = AllGamesFromEventMultiPgnStream(fileStream, file + "/" + entry.FullName);
+                        await foreach (var game in all) {
+                            yield return game;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static async IAsyncEnumerable<ParsedPGN> AllGamesFromEventMultiPgnStream(StreamReader reader, string filename) {
         StringBuilder sb = new StringBuilder();
         int entryCount = 0;
         int lineNumber = 1;
         int sbLineNumber = 1;
-        using (var reader = System.IO.File.OpenText(file)) {
+
+        using (reader) {
             string line;
             while ((line = await reader.ReadLineAsync()) != null) {
                 if (line.StartsWith("[Event")) {
                     if (sb.Length > 0) {
-                        yield return new ParsedPGN($"file://{file}#{sbLineNumber} (game {entryCount})", sb.ToString());
+                        yield return new ParsedPGN($"{filename}#{sbLineNumber} (game {entryCount})", sb.ToString());
                         sb.Clear();
                         entryCount++;
                         sbLineNumber = lineNumber;
@@ -149,7 +210,22 @@ internal class Program {
             }
         }
         if (sb.Length > 0) {
-            yield return new ParsedPGN($"file://{file}#{sbLineNumber} (game {entryCount})", sb.ToString());
+            yield return new ParsedPGN($"{filename}#{sbLineNumber} (game {entryCount})", sb.ToString());
+        }
+
+    }
+
+    public static async IAsyncEnumerable<ParsedPGN> AllGamesFromEventMultiPgnFile(string file) {
+        //TODO: make less scuffed (check for start of "[" block instead of "[Event", but this works for lichess and chess.com examples i've seen so far)
+        StringBuilder sb = new StringBuilder();
+        int entryCount = 0;
+        int lineNumber = 1;
+        int sbLineNumber = 1;
+        using (var reader = System.IO.File.OpenText(file)) {
+            var all = AllGamesFromEventMultiPgnStream(reader, file);
+            await foreach (var game in all) {
+                yield return game;
+            }
         }
     }
 

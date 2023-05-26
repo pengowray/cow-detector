@@ -7,16 +7,9 @@ using System.Threading.Tasks;
 
 namespace BovineChess;
 public class OpeningMatch {
-    public int MatchedMoves {
-        get {
-            return SeenMoves?.Length ?? 0;
-        }
-    }
-
-    //public int MatchedMovesSlow{ get; private set; } = 0; // allow other moves inbetween
-
-
-    public string[] SeenMoves { get; private set; }
+    
+    
+    public string[] Seen { get; private set; }
     public Move LastMove { get; private set; } // last move of seen moves
     public string[] SeenNoBreaks { get; private set; } // don't allow other moves in between
     public string[] SeenInOrder { get; private set; }
@@ -77,7 +70,7 @@ public class OpeningMatch {
 
         }
 
-        SeenMoves = seen.ToArray();
+        Seen = seen.ToArray();
         SeenNoBreaks = seenNoBreaks.ToArray();
         SeenInOrder = seenInOrder.ToArray();
         SeenInOrderNoBreaks = seenInOrderNoBreaks.ToArray();
