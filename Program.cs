@@ -1,8 +1,13 @@
-﻿using System.IO.Compression;
+﻿using ICSharpCode.SharpZipLib.BZip2;
+using ICSharpCode.SharpZipLib.Tar;
+using System.IO;
+using System.IO.Compression;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Xml.Linq;
+using ZstdSharp;
 
 namespace BovineChess;
 internal class Program {
@@ -98,7 +103,7 @@ internal class Program {
         // => https://lichess.org/UemmwQwt
         // => https://lichess.org/h1CKf15x - partial cow (black: 6/6 in 14 k[8] q[14]) - DrNykterstein v Puddingsjakk (1-0) - [A13]
         //var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\lichess_penguingim1_2023-05-24.pgn"); // https://www.twitch.tv/penguingm1/
-        
+
         //var games = AllGamesFromEventMultiPgnFile(@"c:\pgn\lichess_TSMFTXH_2023-05-25.pgn"); https://lichess.org/api/games/user/tsmftxh // hikaru?
         // => https://lichess.org/cKUFqHRw tortured complete cow on move 13 - partial cow (white: 6/6 in 13 K[3] Q[13]) - arian95 v penguingim1 (0-1)
         // => https://lichess.org/V0ZReyC4 complete cow on final move
@@ -112,10 +117,14 @@ internal class Program {
 
         //general pgn files, e.g. https://www.pgnmentor.com/files.html
         //var games = AllGamesFromEventMultiPgnFile(@"C:\pgn\Carlsen.pgn");
-        var games = AllGamesFromZipFile(@"C:\pgn\pgnfiles\Giri.zip");
+        //var games = AllGamesFromZipFile(@"C:\pgn\pgnfiles\Giri.zip");
         //var games = AllGamesFromFolder(@"C:\pgn\pgnfiles");
         //var games = AllGamesFromZipFile(@"C:\pgn\elite\LichessEliteDatabase.zip");
         //var games = AllGamesFromFolder(@"C:\pgn\twic");
+        //var games = AllGamesFromZipFile(@"C:\pgn\icofy\IB107PGN.zip");
+        var games = AllGamesFromFolder(@"C:\pgn\icofy");
+
+        //var games = AllGamesFromZstFile(@"C:\pgn\lichess\lichess_db_standard_rated_2013-01.pgn.zst");
 
         var outputPgn = @"c:\pgn\output\cows.pgn";
         var outputPgnPart = @"c:\pgn\output\partial-cows.pgn";
@@ -160,19 +169,27 @@ internal class Program {
         // todo: optionally recurse into subfolders
 
         foreach (var file in Directory.EnumerateFiles(folder)) {
-            if (file.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) {
-                await foreach (var game in AllGamesFromZipFile(file)) {
+            if (file.EndsWith(".tar.bz2", StringComparison.OrdinalIgnoreCase)) {
+                await foreach (var game in AllGamesFromTarBz2(file)) {
+                    yield return game;
+                }
+            } else if (file.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) {
+                await foreach (var game in AllGamesFromZip(file)) {
+                    yield return game;
+                }
+            } else if (file.EndsWith(".zst", StringComparison.OrdinalIgnoreCase)) {
+                await foreach (var game in AllGamesFromZst(file)) {
                     yield return game;
                 }
             } else if (file.EndsWith(".pgn", StringComparison.OrdinalIgnoreCase)) {
                 await foreach (var game in AllGamesFromEventMultiPgnFile(file)) {
                     yield return game;
                 }
-            } 
+            }
         }
     }
 
-    public static async IAsyncEnumerable<ParsedPGN> AllGamesFromZipFile(string file) {
+    public static async IAsyncEnumerable<ParsedPGN> AllGamesFromZip(string file) {
         using (var archive = ZipFile.OpenRead(file)) {
             foreach (var entry in archive.Entries) {
                 if (entry.FullName.EndsWith(".pgn", StringComparison.OrdinalIgnoreCase)) {
@@ -187,6 +204,42 @@ internal class Program {
             }
         }
     }
+
+    public static async IAsyncEnumerable<ParsedPGN> AllGamesFromTarBz2(string tarBz2Path, [EnumeratorCancellation] CancellationToken ct = default) {
+        using (var bz2Stream = File.OpenRead(tarBz2Path)) {
+            using (var bzip2InputStream = new BZip2InputStream(bz2Stream))
+            using (var tarInputStream = new TarInputStream(bzip2InputStream, Encoding.Latin1)) { // not sure about this encoding
+                TarEntry tarEntry;
+                while ((tarEntry = await tarInputStream.GetNextEntryAsync(ct)) != null) {
+                    if (tarEntry != null && !tarEntry.IsDirectory) {
+                        // Calculate the size of the entry to read only that much
+                        var buffer = new byte[tarEntry.Size];
+                        await tarInputStream.ReadAsync(buffer, 0, buffer.Length, ct);
+
+                        using (var entryStream = new MemoryStream(buffer))
+                        using (var reader = new StreamReader(entryStream)) {
+                            if (tarEntry.Name.EndsWith(".pgn", StringComparison.OrdinalIgnoreCase)) {
+                                var all = AllGamesFromEventMultiPgnStream(reader, tarBz2Path + "/" + tarEntry.Name);
+                                await foreach (var game in all.WithCancellation(ct)) {
+                                    yield return game;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public static async IAsyncEnumerable<ParsedPGN> AllGamesFromZst(string file) {
+        using var input = File.OpenRead(file);
+        using var fileStream = new StreamReader(new DecompressionStream(input));
+        var all = AllGamesFromEventMultiPgnStream(fileStream, file);
+        await foreach (var game in all) {
+            yield return game;
+        }
+    }
+
 
     public static async IAsyncEnumerable<ParsedPGN> AllGamesFromEventMultiPgnStream(StreamReader reader, string filename) {
         StringBuilder sb = new StringBuilder();

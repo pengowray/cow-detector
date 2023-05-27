@@ -43,9 +43,13 @@ public class Move {
     // - sometimes just a single letter written down e.g. "R" (rook moved; maybe didn't record where; was also moved in previous and next movews): 1. e4 c5 2. Nf3 g6 3. d4 cxd4 4. Qxd4 Nf6 5. e5 Nc6 6. Qa4 Nd5 7. Qe4 Ndb4 8. Bb5 a6 9. Bxc6 Nxc6 10. Nc3 Bg7 11. Bf4 O-O 12. O-O-O d6 13. exd6 exd6 14. Rxd6 Qa5 15. Rd5 b5 16. Bd6 Bf5 17. Rxf5 gxf5 18. Qxc6 R 19. Qd5 Rfd8 20. Ne5 1-0
 
     // TODO: Seirawan Chess and Capablanca Chess
-    // "H" for Hawk, "E" for Elephant, "A" for Archbishop, "C" for Chancellor).
+    // - "H" for Hawk, "E" for Elephant, "A" for Archbishop, "C" for Chancellor).
 
-    // see:
+    // Notation used in icofy
+    // - "45.Qd1 h1Q" instead of "45.Qd1 h1=Q" (both versions found of same game found in the files)
+    // - full move list for testing: "1.e3 d5 2.d3 e5 3.Ne2 Bd6 4.Nd2 c6 5.Ng3 f5 6.Nb3 Nf6 7.Be2 O-O 8.Nh5 Nbd7 9.Bd2 b6 10.d4 Nxh5 11.Bxh5 e4 12.Be2 Qc7 13.g3 a5 14.a4 Nf6 15.h3 Be6 16.Bf1 g5 17.Nc1 Bxg3 18.Bg2 Bd6 19.Ne2 Nh5 20.Ng1 Qf7 21.Qe2 f4 22.Qd1 f3 23.Bf1 Ng3 24.Rh2 Nxf1 25.Rh1 Nxd2 26.Qxd2 c5 27.O-O-O Qf6 28.c3 Rfc8 29.Kb1 c4 30.Qc2 b5 31.Rd2 bxa4 32.h4 g4 33.h5 Bd7 34.h6 Be8 35.Qd1 Rcb8 36.Nh3 gxh3 37.Rg1+ Kf8 38.Rg4 h2 39.Qf1 Qxh6 40.Rd1 a3 41.Rxe4 Bg6 42.Ka2 Rxb2+ 43.Ka1 Bxe4 44.Rb1 Bxb1 45.Qd1 h1Q 46.Qxf3+ 0-1"
+
+    // see also:
     // https://en.wikipedia.org/wiki/Portable_Game_Notation
     // https://en.wikipedia.org/wiki/Algebraic_notation_(chess)
     // https://en.wikipedia.org/wiki/Chess_notation
@@ -54,6 +58,20 @@ public class Move {
     // https://en.wikipedia.org/wiki/Universal_Chess_Interface
 
     private static readonly Regex MoveParts = new Regex(@"(O-O|O-O-O|--|([PNBRQK]?)(?<drop>\@)?([a-h]?[1-8]?)(x)?([a-h][1-8])(?:=?([NBRQ]))?(\+\+|\+|#)?([\!\?]+(N|TN)?)?)", RegexOptions.Compiled);
+
+    // TODO: parse time handling commands: (maybe in another class as it uses both tags and comments)
+    // https://www.enpassant.dk/chess/palview/enhancedpgn.htm
+    // {[%clk 1:55:21]}
+    // {[%egt 1:25:42]} - Elapsed Game Time 
+    // {[%emt 0:34:18]} - Elapsed Move Time
+    // {[%mct 17:10:42]} - time displayed on a mechanical clock
+    // also relevant:
+    // [Clock "B/0:45:56"] - Clock tag
+    // [TimeControl "40/7200:3600"] - Time Control tag
+    // [TimeControl "60 mins"] // non standard time control from DGT board [ePGN "0.1;DGT LiveChess/2.2"] (due to DGT LiveViewer GUI freeform field)
+    // [WhiteClock "1:07:00"] - mainly intended to cover the case where a game is adjourned and the displayed clock times at start of play are thus non standard
+    // [BlackClock "0:56:00"]
+
 
     // technically this is a Ply, not a Move.
     // TODO: Rename: Ply

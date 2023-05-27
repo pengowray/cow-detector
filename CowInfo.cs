@@ -60,8 +60,8 @@ public class CowInfo {
     //TODO: more flexible with partial cow: complete one side, slow cow < 12 moves, 5/6 cow, etc?
     // was: PartialWhiteCow => CowWhite.SeenNoBreaks.Length >= 3;
     // now it's more slowCow than partialCow
-    public bool PartialWhiteCow => (CowWhite.Seen.Length >= 6 && CowWhite.LastMove.moveNumber <= 12) || (CowWhite.Seen.Length >= 5 && CowWhite.LastMove.moveNumber <= 7);
-    public bool PartialBlackCow => (CowBlack.Seen.Length >= 6 && CowBlack.LastMove.moveNumber <= 12) || (CowBlack.Seen.Length >= 5 && CowBlack.LastMove.moveNumber <= 7);
+    public bool PartialWhiteCow => (CowWhite.Seen.Length >= 6 && CowWhite.LastMove.moveNumber <= 16) || (CowWhite.Seen.Length >= 5 && CowWhite.LastMove.moveNumber <= 8);
+    public bool PartialBlackCow => (CowBlack.Seen.Length >= 6 && CowBlack.LastMove.moveNumber <= 16) || (CowBlack.Seen.Length >= 5 && CowBlack.LastMove.moveNumber <= 8);
 
     public bool HasPartialCows => PartialWhiteCow || PartialBlackCow;
 

@@ -140,8 +140,8 @@ public class CowStats {
         Console.WriteLine($" - total games: {totalGames}; games with cows: {gamesWithCows}, including {doubleCows} with double cows for a total of {totalCows} cows.");
         Console.WriteLine($" - games with one cow: Cow wins/losses/draws: {cowWins}/{cowLosses}/{cowDraws}");
         Console.WriteLine($" - white cows: {whiteCows}; black cows: {blackCows}");
-        Console.WriteLine($" - total players: {allUsers.Count()}; players who used cow opening at least once: {cowUser.Count()} ({percent:P2}) " + string.Join(" ", cowUser.OrderBy(u => u)));
-        Console.WriteLine($" - games with no full cows but some partial cow: {partialCow}. Partial cow players (if any): " + string.Join(" ", partialCowUser.OrderBy(u => u)));
+        Console.WriteLine($" - total players: {allUsers.Count()}; players who used cow opening at least once: {cowUser.Count()} ({percent:P2}) " + string.Join("; ", cowUser.OrderBy(u => u)));
+        Console.WriteLine($" - games with no full cows but some partial cow: {partialCow}. Partial cow players (if any): " + string.Join("; ", partialCowUser.OrderBy(u => u)));
     }
 
 }

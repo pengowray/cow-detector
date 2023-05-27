@@ -108,8 +108,8 @@ public class ParsedPGN {
     // RegexOptions.Singleline to allow for newlines (e.g. in comments)
     // note: \@ is just for Crazy House and Bughouse variations
     // "--" and single letter moves e.g. "R" are for The Week in Chess (twic) PGNs which have missing, partial or null moves recorded
-
-    private static readonly Regex MovesRegex = new Regex(@"((?<num>\d+)(?<dots>\.|\.\.\.))(\s+(?![0-9]+\.)((?<move>(O-O(-O)?|0-0(-0)?|\-\-|[a-zA-Z][a-z0-9A-Z\@]?)[a-z0-9A-Z\-\=\+\#\!\?⌓□∞⩲⩱±∓⯹\(\)\/\@]*)(\s+{(?<comment>.*?)})?(\s+(?<result>0\-1|1\-0|1\/2\-1\/2))?)){1,2}\s*", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.ExplicitCapture);
+    // icofy base: doesn't use a space after the number: "1.c4 f5 2.Nc3 Nf6 3.g3 g6 4.Bg2 Bg7 5.d3 d6 6.e4 Nc6 7.Nge2 O-O 8.O-O e5" so changed a \s+ to \s*
+    private static readonly Regex MovesRegex = new Regex(@"((?<num>\d+)(?<dots>\.|\.\.\.))(\s*(?![0-9]+\.)((?<move>(O-O(-O)?|0-0(-0)?|\-\-|[a-zA-Z][a-z0-9A-Z\@]?)[a-z0-9A-Z\-\=\+\#\!\?⌓□∞⩲⩱±∓⯹\(\)\/\@]*)(\s+{(?<comment>.*?)})?(\s+(?<result>0\-1|1\-0|1\/2\-1\/2))?)){1,2}\s*", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.ExplicitCapture);
 
     public void ParsePgn(string pgn) {
         var lines = pgn.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
