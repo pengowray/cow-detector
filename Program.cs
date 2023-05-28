@@ -131,20 +131,20 @@ internal class Program {
 
         using (StreamWriter outputFile = new StreamWriter(outputPgn))
         using (StreamWriter outputFile2 = new StreamWriter(outputPgnPart)) {
+            outputFile.NewLine = "\n";
+            outputFile2.NewLine = "\n";
 
             CowStats stats = new();
             await foreach (var game in games) {
                 //await Console.Out.WriteLineAsync(game.Url);
                 var cows = stats.UpdateWithCows(game, showCowless: false);
                 if (cows?.HasCows ?? false) {
-                    outputFile?.WriteLineAsync(game.Pgn.TrimEnd());
-                    outputFile?.WriteLineAsync();
-                    outputFile?.WriteLineAsync();
+                    var pgn = game.OriginalPgnWithAddedTag("Cows", cows.ToString());
+                    outputFile?.WriteAsync(pgn + "\n\n\n");
                     outputFile?.Flush();
                 } else if (cows?.HasPartialCows ?? false) {
-                    outputFile2?.WriteLineAsync(game.Pgn.TrimEnd());
-                    outputFile2?.WriteLineAsync();
-                    outputFile2?.WriteLineAsync();
+                    var pgn = game.OriginalPgnWithAddedTag("Cows", cows.ToString());
+                    outputFile2?.WriteAsync(pgn + "\n\n\n");
                     outputFile2?.Flush();
                 }
             }

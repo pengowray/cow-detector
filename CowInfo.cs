@@ -93,14 +93,14 @@ public class CowInfo {
             string whitePart = "";
             string blackPart = "";
             if (PartialWhiteCow) {
-                whitePart = $"white: {WhiteCowCompleteness}/6 in {CowWhite?.LastMove?.moveNumber}";
-                if (CowWhiteKingSide.Seen.Length >= 3) whitePart += $" K[{CowWhiteKingSide.LastMove?.moveNumber}]"; //  " ♚";
-                if (CowWhiteQueenSide.Seen.Length >= 3) whitePart += $" Q[{CowWhiteQueenSide.LastMove?.moveNumber}]"; //  " ♛";
+                whitePart = $"white: {CowWhite?.LastMove?.moveNumber}. {WhiteCowCompleteness}/6";
+                if (CowWhiteKingSide.Seen.Length >= 3) whitePart += $" {CowWhiteKingSide.LastMove?.moveNumber}. K"; //  " ♚";
+                if (CowWhiteQueenSide.Seen.Length >= 3) whitePart += $" {CowWhiteQueenSide.LastMove?.moveNumber}. Q"; //  " ♛";
             }
             if (PartialBlackCow) {
-                blackPart = $"black: {BlackCowCompleteness}/6 in {CowBlack?.LastMove?.moveNumber}";
-                if (CowBlackKingSide.Seen.Length >= 3) blackPart += $" k[{CowBlackKingSide.LastMove?.moveNumber}]"; // " ♔";
-                if (CowBlackQueenSide.Seen.Length >= 3) blackPart += $" q[{CowBlackQueenSide.LastMove?.moveNumber}]"; //  " ♕";
+                blackPart = $"black: {CowBlack?.LastMove?.moveNumber}... {BlackCowCompleteness}/6";
+                if (CowBlackKingSide.Seen.Length >= 3) blackPart += $" {CowBlackKingSide.LastMove?.moveNumber}... k"; // " ♔";
+                if (CowBlackQueenSide.Seen.Length >= 3) blackPart += $" {CowBlackQueenSide.LastMove?.moveNumber}... q"; //  " ♕";
             }
             if (whitePart != "" && blackPart != "")
                 return $"partial cows ({whitePart}; {blackPart})";

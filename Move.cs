@@ -10,6 +10,7 @@ public class Move {
     public bool isBlack;
     public int moveNumber;
     public string move;
+    public int? nag; // numeric annotation glyph
     public string? comment;
 
     //TODO: track board state
@@ -56,8 +57,9 @@ public class Move {
     // https://en.wikipedia.org/wiki/Chess_annotation_symbols
     // https://en.wikipedia.org/wiki/Chess_symbols_in_Unicode
     // https://en.wikipedia.org/wiki/Universal_Chess_Interface
+    // https://en.wikipedia.org/wiki/Descriptive_notation [obsolete]
 
-    private static readonly Regex MoveParts = new Regex(@"(O-O|O-O-O|--|([PNBRQK]?)(?<drop>\@)?([a-h]?[1-8]?)(x)?([a-h][1-8])(?:=?([NBRQ]))?(\+\+|\+|#)?([\!\?]+(N|TN)?)?)", RegexOptions.Compiled);
+    private static readonly Regex MoveParts = new Regex(@"(O-O|O-O-O|--|([PNBRQK]?)(?<drop>\@)?([a-h]?[1-8]?)(x)?([a-h][1-8])(?:=?([NBRQ]))?(\+\+|\+|#)?([\!\?]+(N|TN)?)?)(?<nag>\s*\$[0-9]+)?", RegexOptions.Compiled);
 
     // TODO: parse time handling commands: (maybe in another class as it uses both tags and comments)
     // https://www.enpassant.dk/chess/palview/enhancedpgn.htm
@@ -75,10 +77,11 @@ public class Move {
 
     // technically this is a Ply, not a Move.
     // TODO: Rename: Ply
-    public Move(bool isBlack, int moveNumber, string move, string? comment) {
+    public Move(bool isBlack, int moveNumber, string move, int? nag, string? comment) {
         this.isBlack = isBlack;
         this.moveNumber = moveNumber;
         this.move = move;
+        this.nag = nag;
         this.comment = comment;
 
         if (this.moveNumber < 1) {
@@ -86,13 +89,14 @@ public class Move {
         }
     }
 
-    public Move(bool isBlack, string moveNumber, string move, string time)
-            : this(isBlack, int.Parse(moveNumber.Trim('.')), move, time) { 
+    public Move(bool isBlack, string moveNumber, string move, int? nag, string time)
+            : this(isBlack, int.Parse(moveNumber.Trim('.')), move, nag, time) { 
     }
 
     public override string ToString() {
         string commentText = (comment == null) ? "" : $" {{{comment}}}";
-        return $"{moveNumber}{(isBlack ? "..." : ".")} {move}{commentText}";
+        string nagText = (nag == null) ? "" : $" ${nag}";
+        return $"{moveNumber}{(isBlack ? "..." : ".")} {move}{nag}{commentText}";
     }
 
 

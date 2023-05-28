@@ -56,6 +56,36 @@ public class ParsedPGN {
     // Should not be set if Tags["Result"] is "*"
     public string EndResult { get; private set; } 
 
+    /// <summary>
+    /// Returns the original pgn, with \n line endings, and with the given tag added to the end of the tag list (or replacing an existing)
+    /// </summary>
+    /// <param name="tagName"></param>
+    /// <param name="tagBody"></param>
+    /// <returns></returns>
+    public string OriginalPgnWithAddedTag(string tagName, string tagBody) {
+        var lines = Pgn.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        const char NL = '\n';
+        var sb = new StringBuilder();
+        bool tagAdded = false;
+        foreach (var line in lines) {
+            if (line.StartsWith("[")) {
+                if (!tagAdded && tagName != null && line.StartsWith($"[{tagName} ")) {
+                    sb.Append($"[{tagName} \"{tagBody}\"]" + NL);
+                    tagAdded = true;
+                } else {
+                    sb.Append(line + NL);
+                }
+            } else {
+                if (!tagAdded && tagName != null) {
+                    sb.Append($"[{tagName} \"{tagBody}\"]" + NL);
+                    tagAdded = true;
+                }
+                sb.Append(line + NL);
+            }
+        }
+        return sb.ToString().TrimEnd();
+    }
+
     public ParsedPGN() {
     }
     public ParsedPGN(string url, string pgn) {
@@ -92,14 +122,18 @@ public class ParsedPGN {
             //TODO: better handling of generic urls
             return null;
         }
+        if (lower == "https://www.redhotpawn.com") {
+            var gameid = GetTag("GameId");
+            if (string.IsNullOrWhiteSpace(gameid)) return null;
+            return $"https://www.redhotpawn.com/chess/chess-game-history.php?gameid={gameid}";
+        }
         return url;
     }
 
     public void SetPgn(string pgn) {
         Pgn = pgn;
-        Tags = ExtractTags(pgn);
-        ParsePgn(pgn);
-
+        ExtractTags();
+        ParsePgn();
     }
 
     // "1." (white move) or "1..." (black move, optional)
@@ -109,16 +143,17 @@ public class ParsedPGN {
     // note: \@ is just for Crazy House and Bughouse variations
     // "--" and single letter moves e.g. "R" are for The Week in Chess (twic) PGNs which have missing, partial or null moves recorded
     // icofy base: doesn't use a space after the number: "1.c4 f5 2.Nc3 Nf6 3.g3 g6 4.Bg2 Bg7 5.d3 d6 6.e4 Nc6 7.Nge2 O-O 8.O-O e5" so changed a \s+ to \s*
-    private static readonly Regex MovesRegex = new Regex(@"((?<num>\d+)(?<dots>\.|\.\.\.))(\s*(?![0-9]+\.)((?<move>(O-O(-O)?|0-0(-0)?|\-\-|[a-zA-Z][a-z0-9A-Z\@]?)[a-z0-9A-Z\-\=\+\#\!\?⌓□∞⩲⩱±∓⯹\(\)\/\@]*)(\s+{(?<comment>.*?)})?(\s+(?<result>0\-1|1\-0|1\/2\-1\/2))?)){1,2}\s*", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.ExplicitCapture);
+    private static readonly Regex MovesRegex = new Regex(@"((?<num>\d+)(?<dots>\.|\.\.\.))(\s*(?![0-9]+\.)((?<move>(O-O(-O)?|0-0(-0)?|\-\-|[a-zA-Z][a-z0-9A-Z\@]?)[a-z0-9A-Z\-\=\+\#\!\?⌓□∞⩲⩱±∓⯹\(\)\/\@]*)(\s+\$(?<nag>\d+))?(\s*{(?<comment>.*?)})?(\s+(?<result>0\-1|1\-0|1\/2\-1\/2|\*))?)){1,2}\s*", RegexOptions.Compiled | RegexOptions.Singleline | RegexOptions.ExplicitCapture);
 
-    public void ParsePgn(string pgn) {
-        var lines = pgn.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+    public void ParsePgn() {
+        var lines = Pgn.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
         List<Move> moves = new List<Move>();
         int currentMoveNumber = 0;
 
         StringBuilder sb = new StringBuilder();
         foreach (var line in lines) {
-            if (line.StartsWith("[") || line.StartsWith(";")) {
+            // ignore: [tags], comments (;), and escape mechanism (%)
+            if (line.StartsWith("[") || line.StartsWith(";") || line.StartsWith("%")) {
                 continue;
             }
             sb.AppendLine(line);
@@ -139,16 +174,18 @@ public class ParsedPGN {
                     Console.WriteLine($"Warning: Out of sequence moves: expected:{currentMoveNumber}. found:{moveNumber}. dots: {dots}");
                     Console.WriteLine("- Moves so far: " + string.Join(" ", moves));
                     Console.WriteLine("- Url: " + Url);
-                    Console.WriteLine("- Full pgn:\n" + pgn);
+                    Console.WriteLine("- Full pgn:\n" + Pgn);
                 }
                 currentMoveNumber = moveNumber;
             }
 
             string move = match.Groups["move"].Captures[0].Value;
             string? comment = (match.Groups["comment"].Captures.Count >= 1) ? match.Groups["comment"].Captures[0].Value : null;
+            string? nagText = (match.Groups["nag"].Captures.Count >= 1) ? match.Groups["nag"].Captures[0].Value : null;
+            int? nag = nagText != null ? int.Parse(nagText) : null;
 
-            var firstPly = new Move(isBlack, currentMoveNumber, move, comment);
-            moves.Add(firstPly);
+            var firstHalfMove = new Move(isBlack, currentMoveNumber, move, nag, comment);
+            moves.Add(firstHalfMove);
 
             bool hasSecondPly = match.Groups["move"].Captures.Count >= 2;
             if (hasSecondPly && isBlack) {
@@ -158,9 +195,11 @@ public class ParsedPGN {
             if (hasSecondPly) {
                 string movePly2 = match.Groups["move"].Captures[1].Value;
                 string? commentPly2 = (match.Groups["comment"].Captures.Count >= 2) ? match.Groups["comment"].Captures[1].Value : null;
+                string? nagText2 = (match.Groups["nag"].Captures.Count >= 2) ? match.Groups["nag"].Captures[1].Value : null;
+                int? nag2 = nagText2 != null ? int.Parse(nagText2) : null;
 
-                var secondPly = new Move(isBlack: true, currentMoveNumber, movePly2, commentPly2);
-                moves.Add(secondPly);
+                var secondHalfMove = new Move(isBlack: true, currentMoveNumber, movePly2, nag2, commentPly2);
+                moves.Add(secondHalfMove);
 
                 currentMoveNumber++;
 
@@ -180,15 +219,15 @@ public class ParsedPGN {
     }
 
 
-    public static Dictionary<string, string> ExtractTags(string pgn) {
-        var metadata = new Dictionary<string, string>();
-        var metadataRegex = new Regex(@"\[(\w+)\s+""([^""]+)""\]", RegexOptions.Multiline);
+    public void ExtractTags() {
+        var tags = new Dictionary<string, string>();
+        var tagRegex = new Regex(@"\[(\w+)\s+""([^""]+)""\]", RegexOptions.Multiline);
 
-        foreach (Match match in metadataRegex.Matches(pgn)) {
-            metadata.Add(match.Groups[1].Value, match.Groups[2].Value);
+        foreach (Match match in tagRegex.Matches(Pgn)) {
+            tags.Add(match.Groups[1].Value, match.Groups[2].Value);
         }
 
-        return metadata;
+        Tags = tags;
     }
 
 
